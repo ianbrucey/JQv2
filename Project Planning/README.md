@@ -1,8 +1,10 @@
-# Legal Case File Management - Project Planning
+# JusticeQuest Legal Workspace - Project Planning
 
 ## Overview
 
-This project planning folder contains comprehensive documentation for transforming OpenHands from an agentic coding environment into a dedicated legal drafting workspace. The transformation focuses on replacing Git repository selection with legal case file management, enabling legal professionals to organize and work with case files efficiently.
+This project planning folder contains comprehensive documentation for **JusticeQuest**, a transformative project that converts OpenHands from an agentic coding environment into a specialized legal drafting and case management workspace. Our mission is to democratize access to professional-grade legal document creation through AI-powered workspace technology.
+
+**📋 For a complete understanding of our project vision and goals, see: [Project Vision and Goals](00_Project_Vision_and_Goals.md)**
 
 ## Project Goals
 
