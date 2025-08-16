@@ -5,6 +5,7 @@ import { RepoConnector } from "#/components/features/home/repo-connector";
 import { TaskSuggestions } from "#/components/features/home/tasks/task-suggestions";
 import { useUserProviders } from "#/hooks/use-user-providers";
 import { GitRepository } from "#/types/git";
+import { useWorkspaceSync, setupTerminalWorkspaceListener } from "#/hooks/use-workspace-sync";
 
 // Legal case components (conditional imports)
 const LegalCaseHeader = React.lazy(() =>
@@ -26,8 +27,36 @@ function HomeScreen() {
   );
   const [mode, setMode] = React.useState<'repository' | 'legal'>('repository');
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
+  const [workspaceState, setWorkspaceState] = React.useState<any>(null);
 
   const providersAreSet = providers.length > 0;
+
+  // Initialize workspace synchronization
+  const { manualSync, resetTerminalState, currentSessionInfo } = useWorkspaceSync({
+    onWorkspaceChange: (newWorkspace) => {
+      setWorkspaceState(newWorkspace);
+      console.log('Workspace changed:', newWorkspace);
+    },
+    onTerminalReset: () => {
+      console.log('Terminal reset for workspace change');
+    },
+    enableAutoSync: true
+  });
+
+  // Setup terminal workspace listener on mount
+  React.useEffect(() => {
+    const cleanup = setupTerminalWorkspaceListener();
+    return cleanup;
+  }, []);
+
+  // Handle mode changes with workspace sync
+  const handleModeChange = React.useCallback((newMode: 'repository' | 'legal') => {
+    setMode(newMode);
+    // Trigger manual sync when mode changes
+    setTimeout(() => {
+      manualSync();
+    }, 100);
+  }, [manualSync]);
 
   // Check if legal system is available
   const [legalSystemAvailable, setLegalSystemAvailable] = React.useState(false);
@@ -66,7 +95,7 @@ function HomeScreen() {
         <div className="flex justify-center mb-4">
           <div className="bg-base-primary rounded-lg p-1 flex">
             <button
-              onClick={() => setMode('repository')}
+              onClick={() => handleModeChange('repository')}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 mode === 'repository'
                   ? 'bg-blue-600 text-white'
@@ -76,7 +105,7 @@ function HomeScreen() {
               Repository Mode
             </button>
             <button
-              onClick={() => setMode('legal')}
+              onClick={() => handleModeChange('legal')}
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 mode === 'legal'
                   ? 'bg-blue-600 text-white'

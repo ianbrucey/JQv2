@@ -17,7 +17,7 @@ from openhands.storage.files import FileStore
 from openhands.storage.secrets.secrets_store import SecretsStore
 from openhands.storage.settings.settings_store import SettingsStore
 from openhands.utils.import_utils import get_impl
-from openhands.server.legal_workspace_manager import initialize_legal_workspace_manager
+
 
 load_dotenv()
 
@@ -88,5 +88,5 @@ ConversationStoreImpl = get_impl(
     server_config.conversation_store_class,
 )
 
-# Initialize legal workspace manager
-legal_workspace_manager = initialize_legal_workspace_manager(config)
+# Note: Legal workspace managers are now initialized per-session
+# See session.py for session-specific initialization

@@ -31,7 +31,11 @@ from openhands.events.stream import EventStreamSubscriber
 from openhands.llm.llm import LLM
 from openhands.runtime.runtime_status import RuntimeStatus
 from openhands.server.constants import ROOM_KEY
-from openhands.server.legal_workspace_manager import get_legal_workspace_manager
+from openhands.server.legal_workspace_manager import (
+    get_legal_workspace_manager,
+    initialize_legal_workspace_manager,
+    cleanup_legal_workspace_manager
+)
 from openhands.server.session.agent_session import AgentSession
 from openhands.server.session.conversation_init_data import ConversationInitData
 from openhands.storage.data_models.settings import Settings
@@ -83,6 +87,11 @@ class Session:
         self.loop = asyncio.get_event_loop()
         self.user_id = user_id
 
+        # Initialize session-specific legal workspace manager
+        self.legal_workspace_manager = initialize_legal_workspace_manager(
+            self.config, self.sid, user_id
+        )
+
     async def close(self) -> None:
         if self.sio:
             await self.sio.emit(
@@ -93,6 +102,10 @@ class Session:
                 to=ROOM_KEY.format(sid=self.sid),
             )
         self.is_alive = False
+
+        # Clean up session-specific legal workspace manager
+        cleanup_legal_workspace_manager(self.sid)
+
         await self.agent_session.close()
 
     async def initialize_agent(
@@ -412,7 +425,8 @@ class Session:
         Returns:
             Modified configuration with legal runtime settings if applicable
         """
-        legal_workspace_manager = get_legal_workspace_manager()
+        # Use session-specific legal workspace manager
+        legal_workspace_manager = get_legal_workspace_manager(self.sid)
 
         # Check multiple indicators for legal case context
         is_legal_case = False

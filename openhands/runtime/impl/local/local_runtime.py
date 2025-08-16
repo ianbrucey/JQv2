@@ -42,6 +42,7 @@ from openhands.runtime.utils import find_available_tcp_port
 from openhands.runtime.utils.command import get_action_execution_server_startup_command
 from openhands.utils.async_utils import call_sync_from_async
 from openhands.utils.tenacity_stop import stop_if_should_exit
+from openhands.runtime.impl.local.workspace_manager import get_workspace_manager, cleanup_workspace_manager
 
 
 @dataclass
@@ -208,6 +209,11 @@ class LocalRuntime(ActionExecutionClient):
     async def connect(self) -> None:
         """Start the action_execution_server on the local machine or connect to an existing one."""
         self.set_runtime_status(RuntimeStatus.STARTING_RUNTIME)
+
+        # Handle workspace transitions for legal cases
+        if self.config.workspace_base:
+            workspace_manager = get_workspace_manager(self.sid)
+            await workspace_manager.transition_workspace(str(self.config.workspace_base))
 
         # Get environment variables for warm server configuration
         desired_num_warm_servers = int(os.getenv('DESIRED_NUM_WARM_SERVERS', '0'))
@@ -471,6 +477,9 @@ class LocalRuntime(ActionExecutionClient):
 
     def close(self) -> None:
         """Stop the server process if not in attach_to_existing mode."""
+        # Clean up workspace manager for this session
+        cleanup_workspace_manager(self.sid)
+
         # If we're in attach_to_existing mode, don't close the server
         if self.attach_to_existing:
             self.log(

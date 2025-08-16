@@ -4,7 +4,7 @@ Legal Case Management API Routes
 import logging
 from typing import Dict, Any
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 
 from openhands.server.dependencies import get_dependencies
@@ -221,14 +221,18 @@ async def delete_case(
 
 @router.post("/cases/{case_id}/enter")
 async def enter_case(
-    case_id: str
+    case_id: str,
+    request: Request
 ) -> Dict[str, Any]:
-    """Enter a legal case workspace."""
+    """Enter a legal case workspace with proper session isolation."""
     try:
-        # Get the workspace manager
-        workspace_manager = get_legal_workspace_manager()
+        # Extract session ID from request headers or generate one
+        session_id = request.headers.get('X-Session-ID', 'default')
+
+        # Get the session-specific workspace manager
+        workspace_manager = get_legal_workspace_manager(session_id)
         if not workspace_manager:
-            raise HTTPException(status_code=500, detail="Workspace manager not initialized")
+            raise HTTPException(status_code=500, detail="Workspace manager not initialized for this session")
 
         # Initialize workspace manager if needed
         if not workspace_manager.case_store:
@@ -237,7 +241,11 @@ async def enter_case(
         # Enter the case workspace
         result = await workspace_manager.enter_case_workspace(case_id)
 
-        logger.info(f"Entered legal case workspace: {case_id}")
+        logger.info(f"Entered legal case workspace: {case_id} for session: {session_id}")
+
+        # Add session information to the result
+        result['session_id'] = session_id
+        result['workspace_transition'] = True
 
         return result
 
@@ -249,16 +257,24 @@ async def enter_case(
 
 
 @router.post("/workspace/exit")
-async def exit_case_workspace() -> Dict[str, Any]:
-    """Exit the current case workspace."""
+async def exit_case_workspace(request: Request) -> Dict[str, Any]:
+    """Exit the current case workspace with proper session isolation."""
     try:
-        workspace_manager = get_legal_workspace_manager()
+        # Extract session ID from request headers
+        session_id = request.headers.get('X-Session-ID', 'default')
+
+        # Get the session-specific workspace manager
+        workspace_manager = get_legal_workspace_manager(session_id)
         if not workspace_manager:
-            raise HTTPException(status_code=500, detail="Workspace manager not initialized")
+            raise HTTPException(status_code=500, detail="Workspace manager not initialized for this session")
 
         result = await workspace_manager.exit_case_workspace()
 
-        logger.info("Exited case workspace")
+        logger.info(f"Exited case workspace for session: {session_id}")
+
+        # Add session information to the result
+        result['session_id'] = session_id
+        result['workspace_transition'] = True
 
         return result
 
@@ -268,12 +284,20 @@ async def exit_case_workspace() -> Dict[str, Any]:
 
 
 @router.get("/workspace/current")
-async def get_current_workspace() -> Dict[str, Any]:
-    """Get current workspace information."""
+async def get_current_workspace(request: Request) -> Dict[str, Any]:
+    """Get current workspace information with session isolation."""
     try:
-        workspace_manager = get_legal_workspace_manager()
+        # Extract session ID from request headers
+        session_id = request.headers.get('X-Session-ID', 'default')
+
+        # Get the session-specific workspace manager
+        workspace_manager = get_legal_workspace_manager(session_id)
         if not workspace_manager:
-            return {"is_in_case_workspace": False, "message": "Workspace manager not initialized"}
+            return {
+                "session_id": session_id,
+                "is_in_case_workspace": False,
+                "message": f"Workspace manager not initialized for session: {session_id}"
+            }
 
         workspace_info = workspace_manager.get_workspace_info()
         current_case = await workspace_manager.get_current_case()
@@ -288,6 +312,7 @@ async def get_current_workspace() -> Dict[str, Any]:
                 }
             })
 
+        workspace_info['session_id'] = session_id
         return workspace_info
 
     except Exception as e:

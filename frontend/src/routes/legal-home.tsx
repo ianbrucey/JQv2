@@ -7,12 +7,27 @@ import { LegalCaseHeader } from "#/components/features/legal-cases/legal-case-he
 import { CaseList } from "#/components/features/legal-cases/case-list";
 import { CreateCaseModal } from "#/components/features/legal-cases/create-case-modal";
 import { useLegalSystemStatus } from "#/hooks/mutation/use-legal-cases";
+import { useWorkspaceSync, setupTerminalWorkspaceListener } from "#/hooks/use-workspace-sync";
 
 <PrefetchPageLinks page="/conversations/:conversationId" />;
 
 function LegalHomeScreen() {
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
   const { data: systemStatus, isLoading: isLoadingStatus } = useLegalSystemStatus();
+
+  // Initialize workspace synchronization for legal home
+  const { manualSync } = useWorkspaceSync({
+    onWorkspaceChange: (newWorkspace) => {
+      console.log('Legal home workspace changed:', newWorkspace);
+    },
+    enableAutoSync: true
+  });
+
+  // Setup terminal workspace listener on mount
+  React.useEffect(() => {
+    const cleanup = setupTerminalWorkspaceListener();
+    return cleanup;
+  }, []);
 
   const handleCreateCase = () => {
     setIsCreateModalOpen(true);
