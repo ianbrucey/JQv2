@@ -9,6 +9,7 @@ import { useNotification } from "#/hooks/useNotification";
 import { browserTab } from "#/utils/browser-tab";
 import { useActiveConversation } from "#/hooks/query/use-active-conversation";
 import { getIndicatorColor, getStatusCode } from "#/utils/status";
+import { RuntimeIndicator } from "./runtime-indicator";
 
 const notificationStates = [
   AgentState.AWAITING_USER_INPUT,
@@ -91,13 +92,14 @@ export function AgentStatusBar() {
   }, []);
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center gap-2">
       <div className="flex items-center bg-base-secondary px-2 py-1 text-gray-400 rounded-[100px] text-sm gap-[6px]">
         <div
           className={`w-2 h-2 rounded-full animate-pulse ${indicatorColor}`}
         />
         <span className="text-sm text-stone-400">{t(statusCode)}</span>
       </div>
+      <RuntimeIndicator className="text-xs" />
     </div>
   );
 }

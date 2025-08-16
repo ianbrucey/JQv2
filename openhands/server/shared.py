@@ -17,10 +17,22 @@ from openhands.storage.files import FileStore
 from openhands.storage.secrets.secrets_store import SecretsStore
 from openhands.storage.settings.settings_store import SettingsStore
 from openhands.utils.import_utils import get_impl
+from openhands.server.legal_workspace_manager import initialize_legal_workspace_manager
 
 load_dotenv()
 
 config: OpenHandsConfig = load_openhands_config()
+
+# Configure LocalRuntime as default for faster startup
+# This eliminates Docker startup delays for all conversations
+if config.runtime == "docker":
+    config.runtime = "local"
+    print("🚀 Configured LocalRuntime for instant startup (no Docker delays)")
+
+# Disable browser to avoid workspace directory issues during startup
+config.enable_browser = False
+print("🌐 Browser disabled for faster startup (can be re-enabled later)")
+
 server_config_interface: ServerConfigInterface = load_server_config()
 assert isinstance(server_config_interface, ServerConfig), (
     'Loaded server config interface is not a ServerConfig, despite this being assumed'
@@ -75,3 +87,6 @@ ConversationStoreImpl = get_impl(
     ConversationStore,
     server_config.conversation_store_class,
 )
+
+# Initialize legal workspace manager
+legal_workspace_manager = initialize_legal_workspace_manager(config)

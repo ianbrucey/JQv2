@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>{{ document_title }} – {{ court_name }}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  /* --- Page + Typography (print-authentic) --- */
+  @page {
+    size: letter;
+    margin: 1in;
+  }
+  html, body {
+    background: #fff;
+  }
+  body {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 14pt;
+    line-height: 2.0;
+    color: #000;
+    margin: 0;
+  }
+
+  /* Container ensures sensible width for on-screen preview */
+  .page {
+    padding: 1in;
+    box-sizing: border-box;
+    max-width: 8.5in;
+    margin: 0 auto;
+  }
+
+  /* --- Caption Block --- */
+  .caption {
+    margin-top: 0.25in;
+    margin-bottom: 0.5in;
+  }
+  .court {
+    text-align: center;
+    font-variant: small-caps;
+    letter-spacing: 0.02em;
+    line-height: 1.5;
+  }
+  .division {
+    text-align: center;
+    margin-top: 0.15in;
+    line-height: 1.5;
+  }
+
+  .caption-grid {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.35in;
+    table-layout: fixed;
+  }
+  .caption-grid td {
+    vertical-align: top;
+    padding: 0.1in 0;
+  }
+  .parties {
+    width: 60%;
+    padding-right: 0.2in;
+  }
+  .parties .name {
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+  .parties .role {
+    text-transform: uppercase;
+  }
+  .vline {
+    width: 2%;
+    border-left: 1px solid #000;
+  }
+  .meta {
+    width: 38%;
+    padding-left: 0.2in;
+  }
+  .meta .label {
+    text-transform: uppercase;
+  }
+
+  .doc-title {
+    text-align: center;
+    text-transform: uppercase;
+    font-weight: bold;
+    margin: 0.5in 0 0.4in;
+  }
+
+  /* --- Body content --- */
+  .section-title {
+    text-transform: uppercase;
+    font-weight: bold;
+    margin-top: 0.35in;
+    margin-bottom: 0.1in;
+    text-align: center;
+  }
+  
+  .section-title.level-2 {
+    text-align: center;
+    margin-top: 0.25in;
+  }
+  
+  .section-title.level-3 {
+    text-align: left;
+    margin-left: 0;
+    margin-top: 0.2in;
+  }
+  
+  p {
+    margin: 0 0 0.17in;
+    text-align: justify;
+    line-height: 2.0;
+  }
+  
+  .numbered-paragraph {
+    text-indent: -0.25in;
+    padding-left: 0.25in;
+  }
+  
+  .paragraph-number {
+    font-weight: bold;
+  }
+  
+  .blockquote {
+    margin: 0.15in 0.3in;
+    padding-left: 0.25in;
+    border-left: 2px solid #000;
+    font-style: italic;
+  }
+  
+  .relief-list {
+    margin: 0.15in 0 0.17in 0.28in;
+  }
+  
+  .relief-list li {
+    margin-bottom: 0.1in;
+  }
+
+  /* --- Legal formatting --- */
+  .statute {
+    font-weight: bold;
+  }
+  
+  .case-cite {
+    font-style: italic;
+  }
+  
+  .emphasis {
+    font-style: italic;
+  }
+
+  /* --- Count formatting --- */
+  .count-header {
+    text-align: center;
+    margin-top: 0.5in;
+    margin-bottom: 0.3in;
+  }
+  
+  .count-title {
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+  
+  .count-subtitle {
+    font-weight: bold;
+    margin-top: 0.1in;
+  }
+
+  /* --- Signature block --- */
+  .signature-block {
+    margin-top: 0.5in;
+  }
+  .sig-line {
+    margin-top: 0.8in;
+    width: 3in;
+    border-top: 1px solid #000;
+  }
+  .right {
+    text-align: right;
+  }
+  .contact {
+    margin-top: 0.05in;
+    line-height: 1.2;
+  }
+
+  /* --- Footer page numbering for print --- */
+  @media print {
+    body {
+      counter-reset: page;
+    }
+    .footer {
+      position: fixed;
+      bottom: 0.5in;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 10pt;
+    }
+    .footer:after {
+      content: "Page " counter(page);
+    }
+    .page {
+      padding: 0;
+    }
+  }
+
+  /* --- Screen-only footer preview --- */
+  @media screen {
+    .footer {
+      display: none;
+    }
+  }
+
+  /* --- Page break utility --- */
+  .page-break {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  /* --- Hanging indent utility for citations --- */
+  .hanging {
+    padding-left: 0.3in;
+    text-indent: -0.3in;
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <!-- Caption -->
+    <div class="caption">
+      <div class="court">{{ court_name }}</div>
+      {% if court_division %}
+      <div class="court">{{ court_division }}</div>
+      {% endif %}
+      {% if court_subdivision %}
+      <div class="division">{{ court_subdivision }}</div>
+      {% endif %}
+
+      <table class="caption-grid">
+        <tr>
+          <td class="parties">
+            <div class="name">{{ plaintiff_name }},</div>
+            <div class="role">Plaintiff,</div>
+            <div style="margin:0.15in 0;">v.</div>
+            <div class="name">{{ defendant_name }},</div>
+            <div class="role">Defendant.</div>
+          </td>
+          <td class="vline">&nbsp;</td>
+          <td class="meta">
+            <div class="label">Case No.</div>
+            <div>{{ case_number }}</div>
+
+            {% if judge %}
+            <div class="label" style="margin-top:0.2in;">Assigned Judge</div>
+            <div>{{ judge }}</div>
+            {% endif %}
+
+            <div class="label" style="margin-top:0.2in;">Document</div>
+            <div>{{ document_title }}</div>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Title -->
+    <div class="doc-title">{{ document_title }}</div>
+
+    <!-- Dynamic Content Sections -->
+    {% for section in content_sections %}
+    <div class="section">
+      {% if section.title and not section.is_count %}
+      <div class="section-title">{{ section.title }}</div>
+      {% elif section.is_count %}
+      <div class="count-header">
+        <div class="count-title">{{ section.title }}</div>
+        {% for subtitle in section.subtitles %}
+        <div class="count-subtitle">{{ subtitle }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      
+      {% for paragraph in section.paragraphs %}
+      <p class="numbered-paragraph">
+        <span class="paragraph-number">{{ paragraph.number }}.</span> {{ paragraph.content | safe }}
+      </p>
+      {% endfor %}
+      
+      {% for list_items in section.lists %}
+      <ol class="relief-list">
+        {% for item in list_items %}
+        <li>{{ item | safe }}</li>
+        {% endfor %}
+      </ol>
+      {% endfor %}
+      
+      {% for subsection in section.subsections %}
+      <div class="subsection">
+        <div class="section-title level-{{ subsection.level }}">{{ subsection.title }}</div>
+        {% for paragraph in subsection.paragraphs %}
+        <p class="numbered-paragraph">
+          <span class="paragraph-number">{{ paragraph.number }}.</span> {{ paragraph.content | safe }}
+        </p>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+
+    <!-- Signature -->
+    <div class="signature-block">
+      <p class="right"><em>Dated:</em> {{ current_date }}</p>
+      <div class="right">
+        <div class="sig-line"></div>
+        <div><strong>{{ attorney_info.name }}</strong>{% if attorney_info.title %}, {{ attorney_info.title }}{% endif %}</div>
+        {% if attorney_info.address %}
+        <div class="contact">{{ attorney_info.address | replace('\n', '<br/>') | safe }}</div>
+        {% endif %}
+        {% if attorney_info.phone or attorney_info.email %}
+        <div class="contact">
+          {% if attorney_info.phone %}Phone: {{ attorney_info.phone }}{% endif %}
+          {% if attorney_info.phone and attorney_info.email %} • {% endif %}
+          {% if attorney_info.email %}Email: {{ attorney_info.email }}{% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Certificate of Service -->
+    {% if certificate_of_service %}
+    <div class="page-break"></div>
+    <div class="section">
+      <div class="section-title">Certificate of Service</div>
+      <p>
+        I hereby certify that on this {{ current_date }}, I served a true and correct copy of the
+        foregoing upon all parties by the method indicated below:
+      </p>
+      
+      {% if certificate_of_service.served_parties %}
+      {% for party in certificate_of_service.served_parties %}
+      <p class="hanging" style="margin-top:0.15in;">
+        {{ party.name }}<br/>
+        {% if party.firm %}{{ party.firm }}<br/>{% endif %}
+        {% if party.address %}{{ party.address | replace('\n', '<br/>') | safe }}<br/>{% endif %}
+        {% if party.method %}{{ party.method }}{% endif %}
+      </p>
+      {% endfor %}
+      {% endif %}
+
+      <div class="signature-block">
+        <div class="right">
+          <div class="sig-line"></div>
+          <div><strong>{{ attorney_info.name }}</strong></div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="footer"></div>
+</body>
+</html>

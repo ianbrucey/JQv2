@@ -19,6 +19,7 @@ from openhands.server.routes.feedback import app as feedback_api_router
 from openhands.server.routes.files import app as files_api_router
 from openhands.server.routes.git import app as git_api_router
 from openhands.server.routes.health import add_health_endpoints
+from openhands.server.routes.legal_cases import router as legal_cases_router
 from openhands.server.routes.manage_conversations import (
     app as manage_conversation_api_router,
 )
@@ -49,6 +50,15 @@ def combine_lifespans(*lifespans):
 @asynccontextmanager
 async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     async with conversation_manager:
+        # Auto-initialize legal workspace manager
+        from openhands.server.legal_workspace_manager import get_legal_workspace_manager
+        workspace_manager = get_legal_workspace_manager()
+        if workspace_manager:
+            try:
+                await workspace_manager.initialize()
+            except Exception as e:
+                print(f"⚠️  Legal workspace manager initialization failed: {e}")
+                print("   Legal case features may not be available")
         yield
 
 
@@ -69,6 +79,7 @@ app.include_router(conversation_api_router)
 app.include_router(manage_conversation_api_router)
 app.include_router(settings_router)
 app.include_router(secrets_router)
+app.include_router(legal_cases_router)
 if server_config.app_mode == AppMode.OSS:
     app.include_router(git_api_router)
 app.include_router(trajectory_router)

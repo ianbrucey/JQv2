@@ -1,0 +1,141 @@
+# Legal Document Generation System - Master YAML Schema
+# Version 1.0
+# This is the universal schema that all legal documents must follow
+
+# ====== METADATA & CONFIGURATION ======
+# High-level information about the document and its formatting
+metadata:
+  doc_type: String # "Motion", "Pleading", "Discovery", "Affidavit", "Brief"
+  doc_version: String # Version tracking for the document
+  created_date: String # ISO format date
+  style_options:
+    numbered_paragraphs: Boolean # true for complaints, false for most motions
+    double_spaced: Boolean # true for court documents
+    font_family: String # "Times New Roman" (default)
+    font_size: Integer # 14 (default)
+    margins: String # "1 inch" (default)
+
+# ====== CAPTION INFORMATION ======
+# All information needed to build the case caption
+caption:
+  court_identifier: String # "IN THE SUPERIOR COURT OF COBB COUNTY"
+  jurisdiction_line: String # "STATE OF GEORGIA"
+  parties:
+    - role: String # "Plaintiff", "Defendant", "Petitioner", "Respondent"
+      names:
+        - String # List of all names for this role
+  case_number: String # Civil action or case file number
+  judge: String # Assigned judge (optional)
+
+# ====== DOCUMENT TITLE ======
+# The main title of the document, typically centered and in all caps
+title: String # "DEFENDANT'S MOTION TO COMPEL DISCOVERY"
+
+# ====== DOCUMENT BODY ======
+# The main content structured as a hierarchy of sections
+# This is a list of top-level sections
+body:
+  - # SECTION object
+    heading: String # "INTRODUCTION", "LEGAL STANDARD", etc.
+    heading_level: Integer # 1 (highest), 2, 3, etc.
+    content:
+      # List of CONTENT BLOCKS
+      - type: 'paragraph'
+        data: String # Text content, use ">" for multi-line
+      - type: 'list'
+        data:
+          style: String # 'bullet', 'numbered', 'lettered'
+          items:
+            - String # List items
+      - type: 'section' # NESTED SECTION for subsections
+        heading: String # "A. Excusable Neglect"
+        heading_level: Integer # Higher number = lower level
+        content:
+          # More content blocks...
+
+# ====== PRAYER FOR RELIEF ======
+# Specific requests for relief (for pleadings)
+prayer_for_relief:
+  heading: String # "PRAYER FOR RELIEF" or "WHEREFORE"
+  requests:
+    - category: String # "monetary", "injunctive", "declaratory"
+      description: String # Specific relief requested
+  attorney_fees: Boolean # Request for attorney fees
+  costs: Boolean # Request for costs
+  other_relief: Boolean # "Such other relief as the Court deems proper"
+
+# ====== SIGNATURE BLOCK ======
+# Information for the signature area
+signature:
+  closing: String # "Respectfully submitted,"
+  name: String # Attorney or party name
+  title: String # "Counsel for Plaintiff", "Pro Se Plaintiff"
+  bar_number: String # State bar number
+  firm_name: String # Law firm name (optional)
+  address: String # Full address
+  phone: String # Phone number
+  email: String # Email address
+
+# ====== CERTIFICATE OF SERVICE ======
+# Certificate of service information
+certificate_of_service:
+  heading: String # "CERTIFICATE OF SERVICE"
+  text: String # Full certification text
+  service_method: String # "hand delivery", "email", "certified mail"
+  service_date: String # Date of service
+  served_parties:
+    - name: String # Name of served party
+      method: String # How they were served
+  served_by: String # Name of person who served
+
+# ====== EXHIBITS ======
+# List of exhibits attached to the document
+exhibits:
+  - exhibit_letter: String # "A", "B", "C"
+    description: String # Description of exhibit
+    file_reference: String # Reference to actual file (optional)
+
+# ====== SPECIAL SECTIONS ======
+# Document-specific sections that may not apply to all documents
+special_sections:
+  # For discovery documents
+  definitions:
+    heading: String # "DEFINITIONS"
+    items:
+      - term: String # Defined term
+        definition: String # Definition text
+  
+  # For motions
+  legal_standard:
+    heading: String # "LEGAL STANDARD"
+    content:
+      # Standard content blocks
+  
+  # For affidavits
+  personal_knowledge:
+    heading: String # "PERSONAL KNOWLEDGE"
+    content:
+      # Standard content blocks
+  
+  # For briefs
+  statement_of_issues:
+    heading: String # "STATEMENT OF ISSUES"
+    issues:
+      - String # Each issue presented
+
+# ====== FORMATTING INSTRUCTIONS ======
+# Special formatting instructions for the Python script
+formatting:
+  page_breaks:
+    - after_section: String # Section heading after which to insert page break
+  special_formatting:
+    - element: String # Element to format specially
+      format_type: String # Type of special formatting
+  
+# ====== VALIDATION RULES ======
+# Rules for validating the document structure
+validation:
+  required_sections:
+    - String # List of required section headings
+  max_heading_levels: Integer # Maximum nesting depth
+  paragraph_numbering_start: Integer # Starting number for paragraphs

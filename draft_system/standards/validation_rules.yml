@@ -1,0 +1,206 @@
+# Markdown Formatting Validation Rules
+# Used by format_validator.py to ensure compliance with unified standards
+
+paragraph_numbering:
+  required_format: "**\\d+\\.**"  # **1.**, **2.**, etc.
+  alternative_format: "**P\\d+\\.**"  # **P1.**, **P2.**, etc. (converted to sequential)
+  invalid_formats:
+    - "\\d+\\."  # Missing bold formatting
+    - "\\*\\d+\\*"  # Single asterisk instead of double
+    - "\\d+\\)"  # Parenthesis instead of period
+  
+cross_references:
+  label_format: "\\{\\{LABEL:[a-z_]+\\}\\}"
+  reference_formats:
+    - "\\{\\{REF:[a-z_]+\\}\\}"  # Single reference
+    - "\\{\\{REF_RANGE:[a-z_]+:[a-z_]+\\}\\}"  # Range reference
+  label_naming:
+    pattern: "[a-z][a-z0-9_]*"  # Must start with letter, lowercase, underscores allowed
+    min_length: 3
+    max_length: 50
+    reserved_words: ["start", "end", "begin", "finish"]  # Cannot be used alone
+  
+headers:
+  allowed_levels: [1, 2, 3]  # H1, H2, H3 only
+  prohibited_levels: [4, 5, 6]  # H4, H5, H6 not allowed
+  format_pattern: "^#{1,3}\\s+[A-Z]"  # Must start with uppercase
+  max_length: 80
+  
+legal_citations:
+  statutes:
+    pattern: "\\*\\*[0-9A-Z\\s\\.§]+\\*\\*"  # Bold formatting required
+    examples: ["**15 U.S.C. § 1681n**", "**O.C.G.A. § 9-11-55(b)**"]
+  cases:
+    pattern: "\\*[^*]+\\*"  # Italic formatting required
+    examples: ["*Smith v. Jones*", "*Brown v. Board*"]
+  regulations:
+    pattern: "[0-9]+\\s+C\\.F\\.R\\.\\s+§\\s+[0-9\\.]+"
+    examples: ["12 C.F.R. § 1026.19(f)"]
+  
+lists:
+  enumerated_pattern: "^\\s*[a-z]\\."  # a., b., c.
+  punctuation_rules:
+    - "semicolon_except_last"  # All items end with ; except last with .
+    - "and_before_last"  # "and" before final item
+  parallel_structure: true
+  
+document_types:
+  complaint:
+    required_sections: ["PARTIES", "JURISDICTION", "FACTUAL ALLEGATIONS"]
+    numbered_paragraphs: true
+    cross_references: true
+    count_format: "COUNT [IVX]+"  # Roman numerals
+  
+  motion:
+    required_sections: ["INTRODUCTION", "ARGUMENT", "CONCLUSION"]
+    numbered_paragraphs: "facts_only"  # Only in statement of facts
+    cross_references: "limited"
+    
+  discovery:
+    required_sections: ["INSTRUCTIONS", "DEFINITIONS"]
+    numbered_paragraphs: true
+    request_format: "REQUEST NO. \\d+:"
+    
+  brief:
+    required_sections: ["STATEMENT OF FACTS", "ARGUMENT"]
+    numbered_paragraphs: "facts_only"
+    citation_density: "high"  # Expect many citations
+    
+  affidavit:
+    required_sections: ["AFFIDAVIT"]
+    numbered_paragraphs: true
+    first_person: true  # Must use first-person statements
+    
+quality_standards:
+  line_length:
+    max: 120
+    warning: 100
+  
+  spacing:
+    after_headers: 1  # One blank line after headers
+    before_headers: 1  # One blank line before headers (except first)
+    
+  language:
+    prohibited_words: ["very", "really", "quite", "rather"]  # Avoid weak modifiers
+    required_tone: "formal"
+    
+  formatting:
+    consistent_bold: true  # **text** not __text__
+    consistent_italic: true  # *text* not _text_
+    no_mixed_formatting: true  # Don't mix ** and __
+    
+validation_levels:
+  strict:
+    enforce_all_rules: true
+    fail_on_warnings: true
+    require_metadata: true
+    
+  standard:
+    enforce_critical_rules: true
+    warn_on_style_issues: true
+    require_basic_metadata: true
+    
+  lenient:
+    enforce_syntax_only: true
+    ignore_style_warnings: true
+    metadata_optional: true
+    
+error_messages:
+  paragraph_numbering:
+    missing_bold: "Paragraph numbers must be bold: **1.** not 1."
+    wrong_format: "Use **1.** format for paragraph numbering"
+    non_sequential: "Paragraph numbers must be sequential"
+    
+  cross_references:
+    invalid_label: "Label names must be lowercase with underscores: {{LABEL:facts_start}}"
+    unresolved_reference: "Reference {{REF:label_name}} does not resolve to any label"
+    missing_label: "Referenced label '{}' not found in document"
+    
+  headers:
+    too_deep: "Headers deeper than H3 (###) are not allowed"
+    wrong_case: "Headers must start with uppercase letters"
+    too_long: "Header exceeds maximum length of 80 characters"
+    
+  legal_citations:
+    statute_not_bold: "Statutes must be bold: **15 U.S.C. § 1681n**"
+    case_not_italic: "Case names must be italic: *Smith v. Jones*"
+    malformed_citation: "Citation format does not match legal standards"
+    
+  lists:
+    wrong_punctuation: "List items must end with semicolons except last item (period)"
+    missing_and: "Use 'and' before the final list item"
+    not_parallel: "List items must have parallel grammatical structure"
+    
+file_requirements:
+  encoding: "utf-8"
+  line_endings: "unix"  # LF not CRLF
+  max_file_size: "1MB"
+  
+metadata_requirements:
+  required_fields:
+    - "document_info.type"
+    - "document_info.title"
+    - "court_info.court_name"
+    - "parties.plaintiff.name"
+  
+  formatting_fields:
+    - "workflow.numbered_paragraphs"
+    - "workflow.cross_references"
+    - "generation_options.font_family"
+    
+integration:
+  html_compatibility: true  # Rules work with HTML generation
+  yaml_compatibility: true  # Rules work with YAML generation
+  word_compatibility: true  # Rules work with Word output
+  pdf_compatibility: true   # Rules work with PDF output
+
+# Case Management Requirements
+case_management_requirements:
+  case_level_structure:
+    required_folders:
+      - name: "Intake"
+        description: "Preliminary documents and user information"
+        validation_level: "standard"
+        purpose: "Collect initial user requests and background information"
+
+    required_files:
+      - name: "Case_Summary_and_Timeline.md"
+        description: "Living document tracking entire case"
+        validation_level: "strict"
+        update_frequency: "after_significant_events"
+        purpose: "Central reference for case context and status"
+
+    recommended_intake_files:
+      - "initial_request.md"
+      - "background_info.md"
+      - "intake_notes.md"
+      - "preliminary_docs/"
+
+  case_summary_sections:
+    required_sections:
+      - "Case Overview"
+      - "Key Parties and Contacts"
+      - "Case Timeline"
+      - "Current Status and Phase"
+      - "Next Steps and Action Items"
+
+    recommended_sections:
+      - "Important Dates and Deadlines"
+      - "Key Documents Reference"
+      - "Legal Issues Summary"
+      - "Agent Context Notes"
+      - "Settlement/Resolution Notes"
+
+  metadata_requirements:
+    required_fields:
+      - "document_info.type"
+      - "document_info.name"
+      - "document_info.title"
+      - "court_info.court_name"
+      - "parties.plaintiff.name"
+
+    optional_fields:
+      - "document_info.status"
+      - "court_info.case_number"
+      - "court_info.judge"
+      - "workflow.current_phase"

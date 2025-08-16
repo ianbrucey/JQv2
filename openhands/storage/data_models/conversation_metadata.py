@@ -15,6 +15,7 @@ class ConversationTrigger(Enum):
     JIRA = 'jira'
     JIRA_DC = 'jira_dc'
     LINEAR = 'linear'
+    LEGAL_CASE = 'legal_case'
 
 
 @dataclass
@@ -35,3 +36,8 @@ class ConversationMetadata:
     prompt_tokens: int = 0
     completion_tokens: int = 0
     total_tokens: int = 0
+    # Legal case specific fields
+    case_id: str | None = None
+    case_title: str | None = None
+    case_number: str | None = None
+    case_status: str | None = None

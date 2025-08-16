@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  openhands-legal:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: openhands-legal
+    ports:
+      - "3000:3000"
+    environment:
+      # Database Configuration
+      - POSTGRES_HOST=host.docker.internal
+      - POSTGRES_PORT=5433
+      - POSTGRES_DB=openhands_legal
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=
+      
+      # Redis Configuration
+      - REDIS_HOST=host.docker.internal
+      - REDIS_PORT=6379
+      
+      # Legal Workspace Configuration
+      - LEGAL_WORKSPACE_ROOT=/app/legal_workspace
+      - DRAFT_SYSTEM_PATH=/app/draft_system
+      - WORKSPACE_BASE=/app/legal_workspace
+      
+      # File Storage
+      - FILE_STORE=local
+      - FILE_STORE_PATH=/app/legal_workspace/files
+      
+      # Security
+      - JWT_SECRET=your-jwt-secret-key-change-this-in-production
+      
+      # Auto-save
+      - AUTO_SAVE_INTERVAL=30
+      
+      # Sandbox Configuration
+      - SANDBOX_VOLUMES=/app/legal_workspace:/workspace:rw,/app/draft_system:/app/draft_system:ro
+      
+    volumes:
+      # Mount draft_system as read-only template
+      - ./draft_system:/app/draft_system:ro
+      
+      # Mount legal workspace for case management
+      - ./legal_workspace:/app/legal_workspace
+      
+      # Mount Docker socket for runtime management
+      - /var/run/docker.sock:/var/run/docker.sock
+      
+    depends_on:
+      - legal-db-setup
+    
+    networks:
+      - openhands-legal-network
+
+  # Database setup service (runs once to initialize schema)
+  legal-db-setup:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: openhands-legal-db-setup
+    environment:
+      - POSTGRES_HOST=host.docker.internal
+      - POSTGRES_PORT=5433
+      - POSTGRES_DB=openhands_legal
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=
+    command: python -m openhands.storage.legal_database_setup
+    networks:
+      - openhands-legal-network
+    restart: "no"
+
+networks:
+  openhands-legal-network:
+    driver: bridge
+
+volumes:
+  legal_workspace:
+    driver: local
+  draft_system:
+    driver: local

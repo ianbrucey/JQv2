@@ -1,0 +1,116 @@
+# Motion Starter Template - Unified Standards
+# Follows standardized markdown formatting and folder structure
+
+metadata:
+  doc_type: "motion"
+  doc_version: "2.0"
+  created_date: ""
+  style_options:
+    numbered_paragraphs: false  # Only in facts section
+    double_spaced: true
+    font_family: "Times New Roman"
+    font_size: 14
+    margins: "1 inch"
+    cross_references: true
+    validation_level: "standard"
+
+caption:
+  court_identifier: ""
+  jurisdiction_line: ""
+  parties:
+    - role: "Plaintiff"
+      names:
+        - ""
+    - role: "Defendant"
+      names:
+        - ""
+  case_number: ""
+  judge: ""
+
+title: "[MOTION TITLE]"
+
+body:
+  - heading: "INTRODUCTION"
+    heading_level: 1
+    content:
+      - type: 'paragraph'
+        data: '[Movant] respectfully moves this Court to [relief requested]. [Brief statement of grounds].'
+      
+      - type: 'paragraph'
+        data: '[Additional introductory paragraph if needed.]'
+
+  - heading: "STATEMENT OF FACTS"
+    heading_level: 1
+    content:
+      - type: 'paragraph'
+        data: '{{LABEL:facts_start}}[First factual allegation with numbered paragraph.]'
+        numbered: true
+      
+      - type: 'paragraph'
+        data: '[Second factual allegation with numbered paragraph.]'
+        numbered: true
+      
+      - type: 'paragraph'
+        data: '[Continue with numbered factual allegations.]{{LABEL:facts_end}}'
+        numbered: true
+
+  - heading: "LEGAL STANDARD"
+    heading_level: 1
+    content:
+      - type: 'paragraph'
+        data: '[Applicable legal standard with citations.]'
+      
+      - type: 'paragraph'
+        data: 'Under **[STATUTE/RULE]**, [legal standard explanation].'
+      
+      - type: 'paragraph'
+        data: 'As stated in *[Case Name]*, [citation and holding].'
+
+  - heading: "ARGUMENT"
+    heading_level: 1
+    content:
+      - type: 'section'
+        heading: "[First Argument Point]"
+        heading_level: 2
+        content:
+          - type: 'paragraph'
+            data: '[First argument paragraph.]'
+          
+          - type: 'paragraph'
+            data: '[Supporting legal authority and analysis.]'
+          
+          - type: 'section'
+            heading: "[Supporting Sub-argument]"
+            heading_level: 3
+            content:
+              - type: 'paragraph'
+                data: '[Detailed legal analysis.]'
+      
+      - type: 'section'
+        heading: "[Second Argument Point]"
+        heading_level: 2
+        content:
+          - type: 'paragraph'
+            data: '[Second argument paragraph.]'
+          
+          - type: 'paragraph'
+            data: '[Supporting legal authority and analysis.]'
+
+  - heading: "CONCLUSION"
+    heading_level: 1
+    content:
+      - type: 'paragraph'
+        data: 'For the foregoing reasons, [Movant] respectfully requests that this Court [specific relief requested].'
+
+signature:
+  attorney_name: ""
+  attorney_title: "Pro Se"
+  attorney_address: ""
+  attorney_phone: ""
+  attorney_email: ""
+  date: ""
+
+certificate_of_service:
+  enabled: true
+  method: "electronic filing"
+  served_parties: []

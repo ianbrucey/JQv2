@@ -1,0 +1,513 @@
+# Document Type Specifications
+# Defines formatting requirements and templates for each legal document type
+
+complaint:
+  description: "Initial pleading stating claims for relief"
+  
+  required_sections:
+    - name: "PARTIES"
+      order: 1
+      numbered_paragraphs: true
+      cross_reference_labels: ["parties_start", "parties_end"]
+      
+    - name: "JURISDICTION AND VENUE"
+      order: 2
+      numbered_paragraphs: true
+      subsections: ["Subject Matter Jurisdiction", "Personal Jurisdiction", "Venue"]
+      
+    - name: "FACTUAL ALLEGATIONS"
+      order: 3
+      numbered_paragraphs: true
+      cross_reference_labels: ["facts_start", "facts_end"]
+      
+    - name: "COUNT I"
+      order: 4
+      numbered_paragraphs: true
+      pattern: "COUNT [IVX]+"
+      subsections_optional: true
+      
+    - name: "PRAYER FOR RELIEF"
+      order: 99
+      numbered_paragraphs: false
+      format: "enumerated_list"
+      
+  formatting_rules:
+    numbered_paragraphs: true
+    cross_references: "extensive"
+    count_numbering: "roman"  # I, II, III, IV
+    reallegation_required: true
+    
+  template_files:
+    - "01_caption_and_parties.md"
+    - "02_jurisdiction_and_venue.md"
+    - "03_factual_allegations.md"
+    - "04_count_i_[claim_type].md"
+    - "05_count_ii_[claim_type].md"
+    - "06_count_iii_[claim_type].md"
+    - "07_prayer_for_relief.md"
+    - "08_jury_demand.md"
+
+motion:
+  description: "Request for court action or relief"
+  
+  required_sections:
+    - name: "INTRODUCTION"
+      order: 1
+      numbered_paragraphs: false
+      max_paragraphs: 3
+      
+    - name: "STATEMENT OF FACTS"
+      order: 2
+      numbered_paragraphs: true
+      cross_reference_labels: ["facts_start", "facts_end"]
+      
+    - name: "LEGAL STANDARD"
+      order: 3
+      numbered_paragraphs: false
+      citations_required: true
+      
+    - name: "ARGUMENT"
+      order: 4
+      numbered_paragraphs: false
+      subsections_required: true
+      
+    - name: "CONCLUSION"
+      order: 5
+      numbered_paragraphs: false
+      max_paragraphs: 2
+      
+  formatting_rules:
+    numbered_paragraphs: "facts_only"
+    cross_references: "limited"
+    citation_density: "high"
+    argument_structure: "hierarchical"
+    
+  template_files:
+    - "01_caption_and_title.md"
+    - "02_introduction.md"
+    - "03_statement_of_facts.md"
+    - "04_legal_standard.md"
+    - "05_argument.md"
+    - "06_conclusion.md"
+
+interrogatories:
+  description: "Written questions requiring sworn answers"
+  
+  required_sections:
+    - name: "INSTRUCTIONS"
+      order: 1
+      numbered_paragraphs: false
+      format: "enumerated_list"
+      
+    - name: "DEFINITIONS"
+      order: 2
+      numbered_paragraphs: true
+      cross_reference_labels: ["definitions_start", "definitions_end"]
+      
+    - name: "INTERROGATORIES"
+      order: 3
+      numbered_paragraphs: true
+      format: "REQUEST NO. X:"
+      
+  formatting_rules:
+    numbered_paragraphs: true
+    request_numbering: "sequential"
+    definitions_required: true
+    instructions_required: true
+    
+  template_files:
+    - "01_caption_and_title.md"
+    - "02_instructions.md"
+    - "03_definitions.md"
+    - "04_interrogatories.md"
+
+requests_for_production:
+  description: "Requests for documents and tangible things"
+  
+  required_sections:
+    - name: "INSTRUCTIONS"
+      order: 1
+      numbered_paragraphs: false
+      format: "enumerated_list"
+      
+    - name: "DEFINITIONS"
+      order: 2
+      numbered_paragraphs: true
+      
+    - name: "REQUESTS FOR PRODUCTION"
+      order: 3
+      numbered_paragraphs: true
+      format: "REQUEST NO. X:"
+      
+  formatting_rules:
+    numbered_paragraphs: true
+    request_numbering: "sequential"
+    definitions_required: true
+    instructions_required: true
+    
+  template_files:
+    - "01_caption_and_title.md"
+    - "02_instructions.md"
+    - "03_definitions.md"
+    - "04_requests_for_production.md"
+
+requests_for_admission:
+  description: "Requests to admit facts or genuineness of documents"
+  
+  required_sections:
+    - name: "INSTRUCTIONS"
+      order: 1
+      numbered_paragraphs: false
+      
+    - name: "DEFINITIONS"
+      order: 2
+      numbered_paragraphs: true
+      
+    - name: "REQUESTS FOR ADMISSION"
+      order: 3
+      numbered_paragraphs: true
+      format: "REQUEST NO. X:"
+      
+  formatting_rules:
+    numbered_paragraphs: true
+    request_numbering: "sequential"
+    admit_deny_format: true
+    
+  template_files:
+    - "01_caption_and_title.md"
+    - "02_instructions.md"
+    - "03_definitions.md"
+    - "04_requests_for_admission.md"
+
+brief:
+  description: "Legal argument document with citations and analysis"
+  
+  required_sections:
+    - name: "TABLE OF CONTENTS"
+      order: 1
+      numbered_paragraphs: false
+      auto_generated: true
+      
+    - name: "TABLE OF AUTHORITIES"
+      order: 2
+      numbered_paragraphs: false
+      auto_generated: true
+      
+    - name: "STATEMENT OF ISSUES"
+      order: 3
+      numbered_paragraphs: false
+      format: "enumerated_list"
+      
+    - name: "STATEMENT OF FACTS"
+      order: 4
+      numbered_paragraphs: true
+      cross_reference_labels: ["facts_start", "facts_end"]
+      
+    - name: "ARGUMENT"
+      order: 5
+      numbered_paragraphs: false
+      subsections_required: true
+      citations_extensive: true
+      
+    - name: "CONCLUSION"
+      order: 6
+      numbered_paragraphs: false
+      
+  formatting_rules:
+    numbered_paragraphs: "facts_only"
+    citation_density: "very_high"
+    argument_structure: "detailed_hierarchy"
+    page_limits: true
+    
+  template_files:
+    - "01_caption_and_title.md"
+    - "02_table_of_contents.md"
+    - "03_table_of_authorities.md"
+    - "04_statement_of_issues.md"
+    - "05_statement_of_facts.md"
+    - "06_argument.md"
+    - "07_conclusion.md"
+
+affidavit:
+  description: "Sworn statement of facts within personal knowledge"
+  
+  required_sections:
+    - name: "AFFIDAVIT"
+      order: 1
+      numbered_paragraphs: true
+      first_person_required: true
+      
+    - name: "SIGNATURE BLOCK"
+      order: 2
+      numbered_paragraphs: false
+      notarization_required: true
+      
+  formatting_rules:
+    numbered_paragraphs: true
+    first_person: true
+    personal_knowledge: true
+    sworn_statement: true
+    
+  template_files:
+    - "01_caption_and_title.md"
+    - "02_affidavit_content.md"
+    - "03_signature_and_notarization.md"
+
+response_to_complaint:
+  description: "Answer to complaint with defenses and counterclaims"
+  
+  required_sections:
+    - name: "ANSWER TO ALLEGATIONS"
+      order: 1
+      numbered_paragraphs: true
+      response_format: "admit_deny_insufficient"
+      
+    - name: "AFFIRMATIVE DEFENSES"
+      order: 2
+      numbered_paragraphs: true
+      defense_numbering: "sequential"
+      
+    - name: "COUNTERCLAIMS"
+      order: 3
+      numbered_paragraphs: true
+      optional: true
+      
+  formatting_rules:
+    numbered_paragraphs: true
+    response_to_each_allegation: true
+    defense_structure: "separate_defenses"
+    
+  template_files:
+    - "01_caption_and_title.md"
+    - "02_answer_to_allegations.md"
+    - "03_affirmative_defenses.md"
+    - "04_counterclaims.md"
+    - "05_prayer_for_relief.md"
+
+settlement:
+  description: "Settlement agreements and related documents"
+  
+  required_sections:
+    - name: "RECITALS"
+      order: 1
+      numbered_paragraphs: false
+      format: "WHEREAS clauses"
+      
+    - name: "AGREEMENT"
+      order: 2
+      numbered_paragraphs: true
+      section_numbering: true
+      
+    - name: "SIGNATURES"
+      order: 3
+      numbered_paragraphs: false
+      
+  formatting_rules:
+    numbered_paragraphs: "agreement_only"
+    contract_formatting: true
+    defined_terms: true
+    
+  template_files:
+    - "01_caption_and_title.md"
+    - "02_recitals.md"
+    - "03_agreement_terms.md"
+    - "04_signatures.md"
+
+appeal:
+  description: "Appellate briefs and related documents"
+  
+  required_sections:
+    - name: "STATEMENT OF JURISDICTION"
+      order: 1
+      numbered_paragraphs: false
+      
+    - name: "STATEMENT OF ISSUES"
+      order: 2
+      numbered_paragraphs: false
+      format: "enumerated_list"
+      
+    - name: "STATEMENT OF THE CASE"
+      order: 3
+      numbered_paragraphs: true
+      
+    - name: "STATEMENT OF FACTS"
+      order: 4
+      numbered_paragraphs: true
+      record_citations_required: true
+      
+    - name: "ARGUMENT"
+      order: 5
+      numbered_paragraphs: false
+      standard_of_review_required: true
+      
+  formatting_rules:
+    numbered_paragraphs: "facts_and_case_only"
+    record_citations: "extensive"
+    page_limits: "strict"
+    appendix_references: true
+    
+  template_files:
+    - "01_caption_and_title.md"
+    - "02_statement_of_jurisdiction.md"
+    - "03_statement_of_issues.md"
+    - "04_statement_of_case.md"
+    - "05_statement_of_facts.md"
+    - "06_argument.md"
+    - "07_conclusion.md"
+
+# Global formatting defaults
+defaults:
+  encoding: "utf-8"
+  line_endings: "unix"
+  font_family: "Times New Roman"
+  font_size: 14
+  line_spacing: 2.0
+  margins: "1 inch"
+  
+  cross_references: true
+  legal_citations: true
+  professional_tone: true
+  
+  validation_level: "standard"
+  auto_numbering: true
+  format_checking: true
+
+# Case Management Structure
+# Defines folder organization and case tracking requirements
+
+folder_structure:
+  case_level_folders:
+    - name: "Intake"
+      description: "Preliminary documents, user information, and case initiation materials"
+      purpose: "Collect initial user prompts, background information, and preliminary documents that describe what the user wants to accomplish"
+      contents:
+        - "Initial client communications"
+        - "Background information documents"
+        - "User prompts and requests"
+        - "Preliminary evidence or documentation"
+        - "Case initiation materials"
+        - "Intake questionnaires or forms"
+      required: true
+      location: "case_root/Intake/"
+
+    - name: "Case_Summary_and_Timeline.md"
+      description: "Living document tracking entire case progress and key information"
+      purpose: "Centralized reference for agents to understand case context without pulling from multiple files"
+      template_sections:
+        - "Case Overview"
+        - "Key Parties and Contacts"
+        - "Important Dates and Deadlines"
+        - "Case Timeline (Chronological)"
+        - "Current Status and Phase"
+        - "Next Steps and Action Items"
+        - "Key Documents Reference"
+        - "Legal Issues Summary"
+        - "Settlement/Resolution Notes"
+        - "Agent Context Notes"
+      required: true
+      location: "case_root/Case_Summary_and_Timeline.md"
+      update_frequency: "after_each_significant_event"
+
+  document_level_subfolders:
+    - name: "draft_content"
+      description: "Markdown files for document content (numbered: 01_, 02_, etc.)"
+      required: true
+      location: "document_folder/draft_content/"
+
+    - name: "research"
+      description: "Legal research and analysis specific to this document"
+      required: true
+      location: "document_folder/research/"
+
+    - name: "exhibits"
+      description: "Supporting documents and evidence for this document"
+      required: true
+      location: "document_folder/exhibits/"
+
+    - name: "reference_material"
+      description: "Background materials and templates for this document"
+      required: true
+      location: "document_folder/reference_material/"
+
+    - name: "case_documents"
+      description: "Filed documents and court orders related to this document"
+      required: true
+      location: "document_folder/case_documents/"
+
+case_summary_template: |
+  # Case Summary and Timeline
+
+  ## Case Overview
+  **Case Name**: [Case Name]
+  **Case Number**: [Case Number if assigned]
+  **Court**: [Court Name and Jurisdiction]
+  **Case Type**: [e.g., Civil Litigation, Contract Dispute, etc.]
+  **Date Opened**: [Date]
+  **Current Status**: [Active/Pending/Resolved]
+
+  ## Key Parties and Contacts
+  ### Plaintiff(s)
+  - **Name**: [Name]
+  - **Role**: [Role/Description]
+  - **Contact**: [Contact Information]
+
+  ### Defendant(s)
+  - **Name**: [Name]
+  - **Role**: [Role/Description]
+  - **Contact**: [Contact Information]
+
+  ### Other Parties
+  - **Name**: [Name]
+  - **Role**: [Role/Description]
+
+  ## Important Dates and Deadlines
+  - **[Date]**: [Description of deadline or important date]
+  - **[Date]**: [Description of deadline or important date]
+
+  ## Case Timeline (Chronological)
+  ### [Date] - Case Initiation
+  - [Description of initial events]
+
+  ### [Date] - [Event Name]
+  - [Description of what happened]
+  - [Any relevant documents or outcomes]
+
+  ## Current Status and Phase
+  **Current Phase**: [e.g., Discovery, Motion Practice, Trial Prep, etc.]
+  **Last Updated**: [Date]
+  **Status Summary**: [Brief description of where things stand]
+
+  ## Next Steps and Action Items
+  - [ ] [Action item with deadline]
+  - [ ] [Action item with deadline]
+  - [ ] [Action item with deadline]
+
+  ## Key Documents Reference
+  ### Filed Documents
+  - **[Document Name]** - [Date Filed] - [Brief Description]
+
+  ### Draft Documents
+  - **[Document Name]** - [Status] - [Location in system]
+
+  ## Legal Issues Summary
+  ### Primary Claims/Defenses
+  1. **[Claim/Defense Name]**: [Brief description and current status]
+  2. **[Claim/Defense Name]**: [Brief description and current status]
+
+  ### Key Legal Questions
+  - [Legal question or issue]
+  - [Legal question or issue]
+
+  ## Settlement/Resolution Notes
+  **Settlement Discussions**: [Status and any key terms discussed]
+  **Resolution Strategy**: [Current approach to resolution]
+
+  ## Agent Context Notes
+  **Key Points for AI Reference**:
+  - [Important context that agents should know]
+  - [Recurring issues or patterns]
+  - [User preferences or special instructions]
+
+  **Document Generation Notes**:
+  - [Any special formatting or content requirements]
+  - [Templates or approaches that work well for this case]

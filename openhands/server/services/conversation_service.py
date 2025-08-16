@@ -109,6 +109,33 @@ async def create_new_conversation(
         conversation_title = get_default_conversation_title(conversation_id)
 
         logger.info(f'Saving metadata for conversation {conversation_id}')
+
+        # Check if this is a legal case conversation
+        legal_workspace_manager = None
+        try:
+            from openhands.server.legal_workspace_manager import get_legal_workspace_manager
+            legal_workspace_manager = get_legal_workspace_manager()
+        except ImportError:
+            pass
+
+        # Extract case information if in legal workspace
+        case_id = None
+        case_title = None
+        case_number = None
+        case_status = None
+
+        if legal_workspace_manager and legal_workspace_manager.is_in_case_workspace():
+            case_id = legal_workspace_manager.current_case_id
+            # Try to get case details
+            try:
+                if legal_workspace_manager.case_store:
+                    case = await legal_workspace_manager.case_store.get_case(case_id)
+                    case_title = case.title
+                    case_number = case.case_number
+                    case_status = case.status
+            except Exception as e:
+                logger.debug(f"Could not retrieve case details: {e}")
+
         await conversation_store.save_metadata(
             ConversationMetadata(
                 trigger=conversation_trigger,
@@ -119,6 +146,10 @@ async def create_new_conversation(
                 selected_branch=selected_branch,
                 git_provider=git_provider,
                 llm_model=conversation_init_data.llm_model,
+                case_id=case_id,
+                case_title=case_title,
+                case_number=case_number,
+                case_status=case_status,
             )
         )
 

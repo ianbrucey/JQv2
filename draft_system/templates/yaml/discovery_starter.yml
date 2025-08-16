@@ -1,0 +1,101 @@
+# Discovery Document Starter Template - Unified Standards
+# Use for interrogatories, requests for production, requests for admission
+
+metadata:
+  doc_type: "discovery"
+  doc_version: "2.0"
+  created_date: ""
+  style_options:
+    numbered_paragraphs: true
+    double_spaced: true
+    font_family: "Times New Roman"
+    font_size: 14
+    margins: "1 inch"
+    cross_references: true
+    validation_level: "standard"
+
+caption:
+  court_identifier: ""
+  jurisdiction_line: ""
+  parties:
+    - role: "Plaintiff"
+      names:
+        - ""
+    - role: "Defendant"
+      names:
+        - ""
+  case_number: ""
+  judge: ""
+
+title: "[DISCOVERY DOCUMENT TITLE]"
+
+body:
+  - heading: "INSTRUCTIONS"
+    heading_level: 1
+    content:
+      - type: 'paragraph'
+        data: 'You are requested to answer the following [interrogatories/requests] under oath and in accordance with the applicable rules of civil procedure.'
+      
+      - type: 'list'
+        style: 'enumerated'
+        items:
+          - 'Each [interrogatory/request] must be answered separately and fully in writing under oath;'
+          - 'If you cannot answer any [interrogatory/request] in full, answer to the extent possible;'
+          - 'If you object to any [interrogatory/request], state the grounds for your objection;'
+          - 'These [interrogatories/requests] are continuing in nature and require supplementation;'
+          - 'Your answers must be served within thirty (30) days of service.'
+
+  - heading: "DEFINITIONS"
+    heading_level: 1
+    content:
+      - type: 'paragraph'
+        data: '{{LABEL:definitions_start}}For purposes of these [interrogatories/requests], the following definitions apply:'
+        numbered: true
+      
+      - type: 'paragraph'
+        data: '"You" or "Your" means [RESPONDING PARTY] and its agents, employees, representatives, and attorneys.'
+        numbered: true
+      
+      - type: 'paragraph'
+        data: '"Document" means any written, recorded, or graphic matter, including electronic data.'
+        numbered: true
+      
+      - type: 'paragraph'
+        data: '"Communication" means any transmission of information by any means.'
+        numbered: true
+      
+      - type: 'paragraph'
+        data: '[Additional definitions as needed.]{{LABEL:definitions_end}}'
+        numbered: true
+
+  - heading: "[INTERROGATORIES/REQUESTS]"
+    heading_level: 1
+    content:
+      - type: 'paragraph'
+        data: 'REQUEST NO. 1: [First request text.]'
+        numbered: true
+      
+      - type: 'paragraph'
+        data: 'REQUEST NO. 2: [Second request text.]'
+        numbered: true
+      
+      - type: 'paragraph'
+        data: 'REQUEST NO. 3: [Third request text.]'
+        numbered: true
+      
+      - type: 'paragraph'
+        data: '[Continue with additional requests as needed.]'
+        numbered: true
+
+signature:
+  attorney_name: ""
+  attorney_title: "Pro Se"
+  attorney_address: ""
+  attorney_phone: ""
+  attorney_email: ""
+  date: ""
+
+certificate_of_service:
+  enabled: true
+  method: "electronic filing"
+  served_parties: []

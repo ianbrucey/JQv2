@@ -31,6 +31,7 @@ from openhands.events.stream import EventStreamSubscriber
 from openhands.llm.llm import LLM
 from openhands.runtime.runtime_status import RuntimeStatus
 from openhands.server.constants import ROOM_KEY
+from openhands.server.legal_workspace_manager import get_legal_workspace_manager
 from openhands.server.session.agent_session import AgentSession
 from openhands.server.session.conversation_init_data import ConversationInitData
 from openhands.storage.data_models.settings import Settings
@@ -227,15 +228,18 @@ class Session:
             custom_secrets = settings.custom_secrets
             conversation_instructions = settings.conversation_instructions
 
+        # Configure runtime for legal case if needed
+        runtime_config = await self._configure_legal_runtime_if_needed(self.config)
+
         try:
             await self.agent_session.start(
-                runtime_name=self.config.runtime,
-                config=self.config,
+                runtime_name=runtime_config.runtime,
+                config=runtime_config,
                 agent=agent,
                 max_iterations=max_iterations,
                 max_budget_per_task=max_budget_per_task,
-                agent_to_llm_config=self.config.get_agent_to_llm_config_map(),
-                agent_configs=self.config.get_agent_configs(),
+                agent_to_llm_config=runtime_config.get_agent_to_llm_config_map(),
+                agent_configs=runtime_config.get_agent_configs(),
                 git_provider_tokens=git_provider_tokens,
                 custom_secrets=custom_secrets,
                 selected_repository=selected_repository,
@@ -395,3 +399,80 @@ class Session:
         asyncio.run_coroutine_threadsafe(
             self._send_status_message(msg_type, runtime_status, message), self.loop
         )
+
+    async def _configure_legal_runtime_if_needed(self, config: OpenHandsConfig) -> OpenHandsConfig:
+        """Configure runtime for legal case workspace if we're in legal mode.
+
+        This method checks if we're currently in a legal case workspace and if so,
+        configures the runtime to use LocalRuntime for instant startup instead of Docker.
+
+        Args:
+            config: The original OpenHands configuration
+
+        Returns:
+            Modified configuration with legal runtime settings if applicable
+        """
+        legal_workspace_manager = get_legal_workspace_manager()
+
+        # Check multiple indicators for legal case context
+        is_legal_case = False
+        case_id = None
+        case_workspace_path = None
+
+        # Method 1: Check if legal workspace manager indicates we're in a case
+        if legal_workspace_manager and legal_workspace_manager.is_in_case_workspace():
+            is_legal_case = True
+            case_id = legal_workspace_manager.current_case_id
+            case_workspace_path = config.workspace_base
+            self.logger.debug(f"Legal case detected via workspace manager: {case_id}")
+
+        # Method 2: Check if workspace path indicates legal case
+        elif config.workspace_base and "legal_workspace/cases/" in str(config.workspace_base):
+            is_legal_case = True
+            # Extract case ID from path
+            try:
+                path_parts = str(config.workspace_base).split("/")
+                if "cases" in path_parts:
+                    case_idx = path_parts.index("cases")
+                    if case_idx + 1 < len(path_parts):
+                        case_id = path_parts[case_idx + 1]
+                case_workspace_path = config.workspace_base
+                self.logger.debug(f"Legal case detected via workspace path: {case_id}")
+            except Exception as e:
+                self.logger.debug(f"Could not extract case ID from path: {e}")
+
+        # Method 3: Check session ID for legal case pattern
+        elif self.sid and ("legal_" in self.sid or "case_" in self.sid):
+            is_legal_case = True
+            case_id = self.sid
+            case_workspace_path = config.workspace_base
+            self.logger.debug(f"Legal case detected via session ID: {case_id}")
+
+        # If not a legal case, use original config
+        if not is_legal_case:
+            return config
+
+        # Create a copy of the config for legal case modifications
+        legal_config = config.model_copy(deep=True)
+
+        # Configure for LocalRuntime to avoid Docker startup delay
+        legal_config.runtime = "local"
+
+        if case_workspace_path:
+            # Configure workspace for LocalRuntime
+            legal_config.workspace_base = case_workspace_path
+            legal_config.workspace_mount_path = case_workspace_path
+            legal_config.workspace_mount_path_in_sandbox = "/workspace"
+
+            # Configure sandbox volumes for local runtime
+            legal_config.sandbox.volumes = f"{case_workspace_path}:/workspace:rw"
+
+            self.logger.info(
+                f"🏛️ Legal Runtime Configuration Applied:\n"
+                f"  • Runtime: {legal_config.runtime} (bypassing Docker for instant startup)\n"
+                f"  • Case ID: {case_id}\n"
+                f"  • Workspace: {case_workspace_path}\n"
+                f"  • Expected startup time: < 5 seconds"
+            )
+
+        return legal_config

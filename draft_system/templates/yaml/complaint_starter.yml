@@ -1,0 +1,156 @@
+# Complaint Starter Template - Unified Standards
+# Follows standardized markdown formatting and folder structure
+
+metadata:
+  doc_type: "complaint"
+  doc_version: "2.0"
+  created_date: ""
+  style_options:
+    numbered_paragraphs: true
+    double_spaced: true
+    font_family: "Times New Roman"
+    font_size: 14
+    margins: "1 inch"
+    cross_references: true
+    validation_level: "standard"
+
+caption:
+  court_identifier: ""
+  jurisdiction_line: ""
+  parties:
+    - role: "Plaintiff"
+      names:
+        - ""
+    - role: "Defendant"
+      names:
+        - ""
+  case_number: ""
+  judge: ""
+
+title: "COMPLAINT FOR DAMAGES"
+
+body:
+  - heading: "PARTIES"
+    heading_level: 1
+    content:
+      - type: 'paragraph'
+        data: '{{LABEL:parties_start}}Plaintiff [PLAINTIFF NAME] is [DESCRIPTION].'
+      
+      - type: 'paragraph'
+        data: 'Defendant **[DEFENDANT NAME]** is [DESCRIPTION].'
+      
+      - type: 'paragraph'
+        data: '[Additional party allegations as needed.]{{LABEL:parties_end}}'
+
+  - heading: "JURISDICTION AND VENUE"
+    heading_level: 1
+    content:
+      - type: 'section'
+        heading: "Subject Matter Jurisdiction"
+        heading_level: 2
+        content:
+          - type: 'paragraph'
+            data: '{{LABEL:jurisdiction_start}}This Court has subject matter jurisdiction pursuant to [STATUTE/RULE].'
+          
+          - type: 'paragraph'
+            data: '[Additional jurisdiction allegations.]{{LABEL:jurisdiction_end}}'
+      
+      - type: 'section'
+        heading: "Personal Jurisdiction"
+        heading_level: 2
+        content:
+          - type: 'paragraph'
+            data: 'This Court has personal jurisdiction over Defendants because [BASIS].'
+      
+      - type: 'section'
+        heading: "Venue"
+        heading_level: 2
+        content:
+          - type: 'paragraph'
+            data: 'Venue is proper in this Court pursuant to [STATUTE/RULE].'
+
+  - heading: "FACTUAL ALLEGATIONS"
+    heading_level: 1
+    content:
+      - type: 'paragraph'
+        data: '{{LABEL:facts_start}}[First factual allegation.]'
+      
+      - type: 'paragraph'
+        data: '[Second factual allegation.]'
+      
+      - type: 'paragraph'
+        data: '[Continue with factual allegations as needed.]{{LABEL:facts_end}}'
+
+  - heading: "COUNT I"
+    heading_level: 1
+    content:
+      - type: 'section'
+        heading: "[CAUSE OF ACTION NAME]"
+        heading_level: 2
+        content:
+          - type: 'paragraph'
+            data: 'Plaintiff realleges paragraphs {{REF_RANGE:parties_start:facts_end}}.'
+          
+          - type: 'paragraph'
+            data: '[First element of cause of action.]'
+          
+          - type: 'paragraph'
+            data: '[Second element of cause of action.]'
+          
+          - type: 'paragraph'
+            data: '[Additional elements as needed.]'
+          
+          - type: 'paragraph'
+            data: 'Defendants have violated [STATUTE/RULE] by [SPECIFIC CONDUCT].'
+          
+          - type: 'paragraph'
+            data: 'As a direct and proximate result of Defendants\' conduct, Plaintiff has suffered damages.'
+
+  - heading: "COUNT II"
+    heading_level: 1
+    content:
+      - type: 'section'
+        heading: "[SECOND CAUSE OF ACTION NAME]"
+        heading_level: 2
+        content:
+          - type: 'paragraph'
+            data: 'Plaintiff realleges paragraphs {{REF_RANGE:parties_start:facts_end}}.'
+          
+          - type: 'paragraph'
+            data: '[Elements of second cause of action.]'
+
+  - heading: "PRAYER FOR RELIEF"
+    heading_level: 1
+    content:
+      - type: 'paragraph'
+        data: 'WHEREFORE, Plaintiff respectfully requests that this Court:'
+      
+      - type: 'list'
+        style: 'enumerated'
+        items:
+          - 'Enter judgment in favor of Plaintiff and against Defendants;'
+          - 'Award actual damages in an amount to be proven at trial;'
+          - 'Award statutory damages as provided by law;'
+          - 'Award punitive damages;'
+          - 'Award attorney\'s fees and costs as provided by law;'
+          - 'Award pre- and post-judgment interest;'
+          - 'Grant such other relief as the Court deems just and proper.'
+
+  - heading: "JURY DEMAND"
+    heading_level: 1
+    content:
+      - type: 'paragraph'
+        data: 'Plaintiff demands a trial by jury on all issues so triable.'
+
+signature:
+  attorney_name: ""
+  attorney_title: "Pro Se"
+  attorney_address: ""
+  attorney_phone: ""
+  attorney_email: ""
+  date: ""
+
+certificate_of_service:
+  enabled: true
+  method: "electronic filing"
+  served_parties: []
