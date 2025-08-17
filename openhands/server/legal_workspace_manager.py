@@ -3,6 +3,7 @@ Legal Workspace Manager - handles workspace switching for legal cases
 """
 import os
 import logging
+import json
 from typing import Optional, Dict, Any
 from pathlib import Path
 
@@ -73,16 +74,30 @@ class LegalWorkspaceManager:
         
         # Update configuration for this case
         self._update_workspace_config(case_workspace_path)
-        
+
+        # Write sentinel and export env var for guardrail
+        try:
+            os.environ['OH_CASE_WORKSPACE'] = case_workspace_path
+            sentinel_path = Path(case_workspace_path) / '.case_workspace.json'
+            sentinel_path.write_text(
+                json.dumps({
+                    'case_id': case_id,
+                    'title': case.title,
+                    'workspace_path': case_workspace_path
+                }, indent=2)
+            )
+        except Exception as e:
+            logger.warning(f"Failed to write sentinel or set env var for case {case_id}: {e}")
+
         # Update case last accessed time
         from datetime import datetime, timezone
         case.last_accessed_at = datetime.now(timezone.utc)
         await self.case_store.update_case(case)
-        
+
         self.current_case_id = case_id
-        
+
         logger.info(f"Entered case workspace: {case_id} at {case_workspace_path}")
-        
+
         return {
             'case_id': case_id,
             'case_title': case.title,
