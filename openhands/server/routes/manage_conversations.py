@@ -317,6 +317,29 @@ async def get_conversation(
         return None
 
 
+@app.get('/conversations/{conversation_id}/metadata')
+async def get_conversation_metadata_api(
+    conversation_id: str,
+    conversation_store: ConversationStore = Depends(get_conversation_store),
+):
+    """Return raw conversation metadata including legal case fields (if any)."""
+    try:
+        metadata = await conversation_store.get_metadata(conversation_id)
+        # Return only the fields we need for workspace sync to minimize payload
+        return JSONResponse(
+            content={
+                'conversation_id': metadata.conversation_id,
+                'trigger': metadata.trigger.value if metadata.trigger else None,
+                'case_id': metadata.case_id,
+                'case_title': metadata.case_title,
+                'case_number': metadata.case_number,
+                'case_status': metadata.case_status,
+            }
+        )
+    except FileNotFoundError:
+        return JSONResponse(status_code=404, content={'detail': 'Conversation not found'})
+
+
 @app.delete('/conversations/{conversation_id}')
 async def delete_conversation(
     conversation_id: str,
