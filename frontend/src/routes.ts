@@ -20,12 +20,9 @@ export default [
       route("api-keys", "routes/api-keys.tsx"),
     ]),
     route("conversations/:conversationId", "routes/conversation.tsx", [
-      index("routes/changes-tab.tsx"),
-      route("browser", "routes/browser-tab.tsx"),
-      route("jupyter", "routes/jupyter-tab.tsx"),
-      route("served", "routes/served-tab.tsx"),
+      // Terminal is the only tab; make it the default index route
+      index("routes/terminal-tab.tsx"),
       route("terminal", "routes/terminal-tab.tsx"),
-      route("vscode", "routes/vscode-tab.tsx"),
     ]),
     route("microagent-management", "routes/microagent-management.tsx"),
   ]),
