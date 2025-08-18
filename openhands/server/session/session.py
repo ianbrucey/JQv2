@@ -1,4 +1,5 @@
 import asyncio
+import os
 import time
 from copy import deepcopy
 from logging import LoggerAdapter
@@ -91,6 +92,9 @@ class Session:
         self.legal_workspace_manager = initialize_legal_workspace_manager(
             self.config, self.sid, user_id
         )
+
+        # Initialize the legal workspace manager
+        asyncio.create_task(self._initialize_legal_workspace_manager())
 
     async def close(self) -> None:
         if self.sio:
@@ -240,6 +244,9 @@ class Session:
             selected_branch = settings.selected_branch
             custom_secrets = settings.custom_secrets
             conversation_instructions = settings.conversation_instructions
+
+        # Detect and enter legal case workspace if this is a legal case conversation
+        await self._detect_and_enter_legal_case(conversation_instructions)
 
         # Configure runtime for legal case if needed
         runtime_config = await self._configure_legal_runtime_if_needed(self.config)
@@ -481,12 +488,77 @@ class Session:
             # Configure sandbox volumes for local runtime
             legal_config.sandbox.volumes = f"{case_workspace_path}:/workspace:rw"
 
+            # Set up environment variables for the runtime
+            if not legal_config.sandbox.runtime_startup_env_vars:
+                legal_config.sandbox.runtime_startup_env_vars = {}
+
+            # Add legal case environment variables that will be available to the agent
+            legal_config.sandbox.runtime_startup_env_vars.update({
+                'OH_CASE_WORKSPACE': case_workspace_path,
+                'LEGAL_CASE_ID': case_id or '',
+                'WORKSPACE_BASE': case_workspace_path,
+                'LEGAL_WORKSPACE_ROOT': os.environ.get('LEGAL_WORKSPACE_ROOT', '/tmp/legal_workspace'),
+                'DRAFT_SYSTEM_PATH': os.environ.get('DRAFT_SYSTEM_PATH', '/tmp/draft_system'),
+            })
+
+            # Create the sentinel file in the workspace
+            try:
+                from pathlib import Path
+                import json
+                sentinel_path = Path(case_workspace_path) / '.case_workspace.json'
+                sentinel_data = {
+                    'case_id': case_id,
+                    'workspace_path': case_workspace_path,
+                    'session_id': self.sid
+                }
+                sentinel_path.write_text(json.dumps(sentinel_data, indent=2))
+                self.logger.debug(f"Created sentinel file: {sentinel_path}")
+            except Exception as e:
+                self.logger.warning(f"Failed to create sentinel file: {e}")
+
             self.logger.info(
                 f"🏛️ Legal Runtime Configuration Applied:\n"
                 f"  • Runtime: {legal_config.runtime} (bypassing Docker for instant startup)\n"
                 f"  • Case ID: {case_id}\n"
                 f"  • Workspace: {case_workspace_path}\n"
+                f"  • Environment Variables: OH_CASE_WORKSPACE, LEGAL_CASE_ID\n"
                 f"  • Expected startup time: < 5 seconds"
             )
 
         return legal_config
+
+    async def _initialize_legal_workspace_manager(self):
+        """Initialize the legal workspace manager for this session."""
+        try:
+            if self.legal_workspace_manager:
+                await self.legal_workspace_manager.initialize(self.user_id)
+                self.logger.debug(f"Legal workspace manager initialized for session: {self.sid}")
+        except Exception as e:
+            self.logger.warning(f"Failed to initialize legal workspace manager: {e}")
+
+    async def _detect_and_enter_legal_case(self, conversation_instructions: str | None = None):
+        """Detect if this is a legal case conversation and automatically enter the case workspace."""
+        if not conversation_instructions or not self.legal_workspace_manager:
+            return
+
+        try:
+            # Parse conversation instructions to extract case ID
+            import re
+            case_id_match = re.search(r'Case ID:\s*([a-f0-9-]+)', conversation_instructions)
+            if case_id_match:
+                case_id = case_id_match.group(1)
+                self.logger.info(f"Detected legal case conversation for case: {case_id}")
+
+                # Initialize workspace manager if not already done
+                if not self.legal_workspace_manager.case_store:
+                    await self.legal_workspace_manager.initialize(self.user_id)
+
+                # Enter the case workspace
+                result = await self.legal_workspace_manager.enter_case_workspace(case_id)
+                self.logger.info(f"Automatically entered case workspace: {result}")
+
+                # Update the config for this session
+                self.config = self._apply_legal_runtime_config(self.config)
+
+        except Exception as e:
+            self.logger.warning(f"Failed to auto-enter legal case workspace: {e}")

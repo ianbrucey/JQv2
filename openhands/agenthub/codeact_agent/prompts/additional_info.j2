@@ -21,17 +21,23 @@ The current working directory is {{ runtime_info.working_dir }}
 {% endif %}
 
 <GUARDRAIL>
-Before any file read or edit, verify you are operating in the active case workspace.
+Before any file read or edit, verify you are operating in the correct workspace.
 
-1) If the environment variable $OH_CASE_WORKSPACE is set, ensure `$PWD` equals `$OH_CASE_WORKSPACE`.
-   - If not, run: `cd "$OH_CASE_WORKSPACE"` and then `pwd` to confirm.
-2) If $OH_CASE_WORKSPACE is not set, look for a sentinel file named `.case_workspace.json` in your current directory or its parents.
-   - If found, read its `workspace_path` and `cd` there before proceeding.
+WORKSPACE VERIFICATION STEPS:
+1) Check environment variable: `echo $OH_CASE_WORKSPACE`
+   - If set, ensure you're in that directory: `cd "$OH_CASE_WORKSPACE" && pwd`
+
+2) If $OH_CASE_WORKSPACE is not set, look for workspace sentinel:
+   - Run: `find . -maxdepth 3 -name ".case_workspace.json" 2>/dev/null | head -1`
+   - If found, read the workspace_path and navigate there
+
+3) Verify current location: `pwd` and `ls -la` to confirm workspace contents
 {% if runtime_info.working_dir %}
-3) If neither exists, default to the expected working directory shown above: {{ runtime_info.working_dir }}.
+4) If no legal workspace detected, use default: {{ runtime_info.working_dir }}
 {% endif %}
 
-Always confirm with `pwd` before modifying files.
+IMPORTANT: Always run `pwd` before any file operations to confirm your location.
+If you find yourself in an unexpected directory (like /var/folders/...), immediately run the workspace verification steps above.
 </GUARDRAIL>
 
 {% if runtime_info.available_hosts %}
