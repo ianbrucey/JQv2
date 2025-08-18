@@ -528,14 +528,23 @@ class Session:
     ) -> OpenHandsConfig:
         """Simple direct approach: Extract case_id from conversation_instructions and set workspace."""
 
+        self.logger.info(f"🏛️ Starting legal runtime configuration detection")
+        self.logger.info(f"🏛️ Conversation instructions: {conversation_instructions}")
+
         # Step 1: Extract case_id from conversation_instructions
         case_id = None
         if conversation_instructions:
             import re
-            case_id_match = re.search(r'Case ID:\s*([a-f0-9-]+)', conversation_instructions)
+            # Updated regex to match any alphanumeric characters, hyphens, and underscores
+            case_id_match = re.search(r'Case ID:\s*([a-zA-Z0-9_-]+)', conversation_instructions)
+            self.logger.info(f"🏛️ Regex search result: {case_id_match}")
             if case_id_match:
                 case_id = case_id_match.group(1)
                 self.logger.info(f"🏛️ Extracted case_id from conversation instructions: {case_id}")
+            else:
+                self.logger.info(f"🏛️ No case_id found in conversation instructions")
+        else:
+            self.logger.info(f"🏛️ No conversation instructions provided")
 
         if case_id:
             try:
