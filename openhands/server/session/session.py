@@ -93,9 +93,6 @@ class Session:
             self.config, self.sid, user_id
         )
 
-        # Initialize the legal workspace manager
-        asyncio.create_task(self._initialize_legal_workspace_manager())
-
     async def close(self) -> None:
         if self.sio:
             await self.sio.emit(
@@ -245,11 +242,10 @@ class Session:
             custom_secrets = settings.custom_secrets
             conversation_instructions = settings.conversation_instructions
 
-        # Detect and enter legal case workspace if this is a legal case conversation
-        await self._detect_and_enter_legal_case(conversation_instructions)
-
-        # Configure runtime for legal case if needed
-        runtime_config = await self._configure_legal_runtime_if_needed(self.config)
+        # Detect and configure legal case workspace BEFORE runtime creation
+        runtime_config = await self._configure_legal_runtime_with_case_detection(
+            self.config, conversation_instructions
+        )
 
         try:
             await self.agent_session.start(
@@ -527,38 +523,38 @@ class Session:
 
         return legal_config
 
-    async def _initialize_legal_workspace_manager(self):
-        """Initialize the legal workspace manager for this session."""
-        try:
-            if self.legal_workspace_manager:
-                await self.legal_workspace_manager.initialize(self.user_id)
-                self.logger.debug(f"Legal workspace manager initialized for session: {self.sid}")
-        except Exception as e:
-            self.logger.warning(f"Failed to initialize legal workspace manager: {e}")
+    async def _configure_legal_runtime_with_case_detection(
+        self, config: OpenHandsConfig, conversation_instructions: str | None = None
+    ) -> OpenHandsConfig:
+        """Detect legal case context and configure runtime before initialization."""
 
-    async def _detect_and_enter_legal_case(self, conversation_instructions: str | None = None):
-        """Detect if this is a legal case conversation and automatically enter the case workspace."""
-        if not conversation_instructions or not self.legal_workspace_manager:
-            return
-
-        try:
-            # Parse conversation instructions to extract case ID
+        # First, try to detect if this is a legal case conversation
+        case_id = None
+        if conversation_instructions:
             import re
             case_id_match = re.search(r'Case ID:\s*([a-f0-9-]+)', conversation_instructions)
             if case_id_match:
                 case_id = case_id_match.group(1)
-                self.logger.info(f"Detected legal case conversation for case: {case_id}")
+                self.logger.info(f"🏛️ Detected legal case conversation for case: {case_id}")
 
+        # If we detected a case ID, configure the workspace before runtime creation
+        if case_id and self.legal_workspace_manager:
+            try:
                 # Initialize workspace manager if not already done
                 if not self.legal_workspace_manager.case_store:
                     await self.legal_workspace_manager.initialize(self.user_id)
 
                 # Enter the case workspace
                 result = await self.legal_workspace_manager.enter_case_workspace(case_id)
-                self.logger.info(f"Automatically entered case workspace: {result}")
+                self.logger.info(f"🏛️ Automatically entered case workspace: {result}")
 
-                # Update the config for this session
-                self.config = self._apply_legal_runtime_config(self.config)
+                # Apply legal runtime configuration with the case workspace
+                config = self._apply_legal_runtime_config(config)
 
-        except Exception as e:
-            self.logger.warning(f"Failed to auto-enter legal case workspace: {e}")
+                return config
+
+            except Exception as e:
+                self.logger.warning(f"Failed to auto-configure legal case workspace: {e}")
+
+        # Fallback to regular legal runtime configuration
+        return await self._configure_legal_runtime_if_needed(config)
