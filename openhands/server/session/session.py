@@ -549,7 +549,7 @@ class Session:
                 self.logger.info(f"🏛️ Automatically entered case workspace: {result}")
 
                 # Apply legal runtime configuration with the case workspace
-                config = self._apply_legal_runtime_config(config)
+                config = await self._configure_legal_runtime_if_needed(config)
 
                 return config
 
