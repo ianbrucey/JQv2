@@ -39,7 +39,7 @@ This conversation is for legal document management and case work. The system is 
           },
           {
             onSuccess: (data) => {
-              navigate(`/conversations/${data.conversation_id}`);
+              window.location.href = `/conversations/${data.conversation_id}`;
             },
           }
         );

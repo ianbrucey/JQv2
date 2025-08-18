@@ -8,7 +8,7 @@ from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 
 from openhands.server.dependencies import get_dependencies
-from openhands.server.legal_workspace_manager import get_legal_workspace_manager
+from openhands.server.legal_workspace_manager import get_legal_workspace_manager, initialize_legal_workspace_manager
 from openhands.server.shared import config
 from openhands.storage.legal_case_store import FileLegalCaseStore
 from openhands.storage.data_models.legal_case import CaseStatus
@@ -16,6 +16,17 @@ from openhands.storage.data_models.legal_case import CaseStatus
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/legal", tags=["legal_cases"], dependencies=get_dependencies())
+from fastapi import UploadFile, File, Form, status
+from fastapi.responses import JSONResponse
+from typing import List, Optional
+import os
+import re
+import hashlib
+import uuid as uuidlib
+import json as jsonlib
+from pathlib import Path
+from datetime import datetime, timezone
+
 
 
 class CreateCaseRequest(BaseModel):
@@ -63,9 +74,9 @@ async def create_case(
             case_number=request.case_number,
             description=request.description
         )
-        
+
         logger.info(f"Created legal case: {case.case_id} - {case.title}")
-        
+
         return CaseResponse(
             case_id=case.case_id,
             title=case.title,
@@ -79,7 +90,7 @@ async def create_case(
             draft_system_initialized=case.draft_system_initialized,
             conversation_id=case.conversation_id
         )
-        
+
     except Exception as e:
         logger.error(f"Failed to create case: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to create case: {str(e)}")
@@ -92,7 +103,7 @@ async def list_cases(
     """List all legal cases for the current user."""
     try:
         cases = await case_store.list_cases()
-        
+
         return [
             CaseResponse(
                 case_id=case.case_id,
@@ -109,7 +120,7 @@ async def list_cases(
             )
             for case in cases
         ]
-        
+
     except Exception as e:
         logger.error(f"Failed to list cases: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to list cases: {str(e)}")
@@ -123,10 +134,10 @@ async def get_case(
     """Get a specific legal case."""
     try:
         case = await case_store.get_case(case_id)
-        
+
         if not case:
             raise HTTPException(status_code=404, detail="Case not found")
-        
+
         return CaseResponse(
             case_id=case.case_id,
             title=case.title,
@@ -140,7 +151,7 @@ async def get_case(
             draft_system_initialized=case.draft_system_initialized,
             conversation_id=case.conversation_id
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -157,10 +168,10 @@ async def update_case(
     """Update a legal case."""
     try:
         case = await case_store.get_case(case_id)
-        
+
         if not case:
             raise HTTPException(status_code=404, detail="Case not found")
-        
+
         # Update fields if provided
         if request.title is not None:
             case.title = request.title
@@ -170,11 +181,11 @@ async def update_case(
             case.description = request.description
         if request.status is not None:
             case.status = CaseStatus(request.status)
-        
+
         await case_store.update_case(case)
-        
+
         logger.info(f"Updated legal case: {case.case_id}")
-        
+
         return CaseResponse(
             case_id=case.case_id,
             title=case.title,
@@ -188,7 +199,7 @@ async def update_case(
             draft_system_initialized=case.draft_system_initialized,
             conversation_id=case.conversation_id
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -205,13 +216,13 @@ async def delete_case(
     try:
         if not await case_store.case_exists(case_id):
             raise HTTPException(status_code=404, detail="Case not found")
-        
+
         await case_store.delete_case(case_id)
-        
+
         logger.info(f"Deleted legal case: {case_id}")
-        
+
         return {"message": "Case deleted successfully"}
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -232,7 +243,8 @@ async def enter_case(
         # Get the session-specific workspace manager
         workspace_manager = get_legal_workspace_manager(session_id)
         if not workspace_manager:
-            raise HTTPException(status_code=500, detail="Workspace manager not initialized for this session")
+            # Initialize a session-specific manager on-demand
+            workspace_manager = initialize_legal_workspace_manager(config, session_id, user_id=None)
 
         # Initialize workspace manager if needed
         if not workspace_manager.case_store:
@@ -383,3 +395,267 @@ async def get_system_status() -> Dict[str, Any]:
             "system_initialized": False,
             "error": str(e)
         }
+
+
+# --------------------------
+# Document Uploads & Listing
+# --------------------------
+
+ALLOWED_EXTENSIONS = {
+    '.pdf', '.png', '.jpg', '.jpeg', '.tif', '.tiff', '.docx', '.txt', '.md'
+}
+ALLOWED_MIME_PREFIXES = (
+    'application/pdf',
+    'image/png', 'image/jpeg', 'image/tiff',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain', 'text/markdown'
+)
+
+FOLDER_MAP = {
+    'inbox': ['Intake', 'inbox'],
+    'exhibits': ['exhibits'],
+    'research': ['research'],
+    'active_drafts': ['active_drafts']
+}
+
+
+def _sanitize_filename(name: str) -> str:
+    # Remove path separators and control characters
+    name = name.replace('\\', '_').replace('/', '_')
+    name = re.sub(r'[^A-Za-z0-9._\- ]+', '', name)
+    name = name.strip()
+    if not name:
+        name = f'file-{uuidlib.uuid4().hex[:8]}'
+    # Limit length
+    if len(name) > 120:
+        base, ext = os.path.splitext(name)
+        name = base[:100] + '_' + uuidlib.uuid4().hex[:8] + ext
+    return name
+
+
+def _unique_path(dir_path: Path, filename: str) -> Path:
+    base, ext = os.path.splitext(filename)
+    candidate = dir_path / filename
+    idx = 1
+    while candidate.exists():
+        candidate = dir_path / f"{base}-{idx}{ext}"
+        idx += 1
+    return candidate
+
+
+def _compute_checksum_and_write(upload: UploadFile, dest_path: Path) -> tuple[str, int]:
+    sha256 = hashlib.sha256()
+    total = 0
+    tmp_path = dest_path.with_suffix(dest_path.suffix + '.part')
+    with open(tmp_path, 'wb') as out:
+        while True:
+            chunk = upload.file.read(1024 * 1024)
+            if not chunk:
+                break
+            sha256.update(chunk)
+            out.write(chunk)
+            total += len(chunk)
+    tmp_path.rename(dest_path)
+    return sha256.hexdigest(), total
+
+
+def _load_manifest(case_root: Path) -> dict:
+    manifest_path = case_root / 'documents_manifest.json'
+    if manifest_path.exists():
+        try:
+            return jsonlib.loads(manifest_path.read_text())
+        except Exception:
+            return {'documents': []}
+    return {'documents': []}
+
+
+def _save_manifest(case_root: Path, manifest: dict) -> None:
+    manifest_path = case_root / 'documents_manifest.json'
+    manifest_path.write_text(jsonlib.dumps(manifest, indent=2))
+
+
+def _find_duplicate(manifest: dict, checksum: str) -> Optional[dict]:
+    for doc in manifest.get('documents', []):
+        if doc.get('checksum_sha256') == checksum:
+            return doc
+    return None
+
+
+@router.post("/cases/{case_id}/documents")
+async def upload_case_documents(
+    case_id: str,
+    request: Request,
+    files: List[UploadFile] = File(...),
+    target_folder: str = Form('inbox'),
+    tags: Optional[str] = Form(None),
+    note: Optional[str] = Form(None),
+):
+    try:
+        session_id = request.headers.get('X-Session-ID')
+        if not session_id:
+            raise HTTPException(status_code=401, detail="Missing X-Session-ID header")
+
+        workspace_manager = get_legal_workspace_manager(session_id)
+        if not workspace_manager:
+            # Initialize a session-specific manager on-demand
+            workspace_manager = initialize_legal_workspace_manager(config, session_id, user_id=None)
+
+        if not workspace_manager.case_store:
+            await workspace_manager.initialize()
+
+        # Enforce session is in the target case
+        if workspace_manager.get_current_case_id() != case_id:
+            raise HTTPException(status_code=403, detail="Session is not in the target case workspace. Enter the case first.")
+
+        # Resolve paths
+        case_store = workspace_manager.case_store
+        case_workspace = Path(case_store.get_case_workspace_path(case_id))  # draft_system
+        case_root = Path(case_store.get_case_root_path(case_id))
+
+        # Determine destination dir
+        if target_folder not in FOLDER_MAP:
+            raise HTTPException(status_code=400, detail="Invalid target_folder")
+        dest_dir = case_workspace.joinpath(*FOLDER_MAP[target_folder])
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
+        # Load manifest
+        manifest = _load_manifest(case_root)
+
+        uploaded, skipped, errors = [], [], []
+        tag_list = []
+        if tags:
+            try:
+                # try JSON first
+                tag_list = jsonlib.loads(tags) if tags.strip().startswith('[') else [t.strip() for t in tags.split(',') if t.strip()]
+            except Exception:
+                tag_list = [t.strip() for t in tags.split(',') if t.strip()]
+
+        # Validation limits
+        MAX_FILE_SIZE = 100 * 1024 * 1024  # 100MB per file
+        ALLOWED = ALLOWED_EXTENSIONS
+
+        for up in files:
+            try:
+                # Quick type/extension checks
+                orig_name = up.filename or 'unnamed'
+                ext = os.path.splitext(orig_name)[1].lower()
+                if ext not in ALLOWED:
+                    raise HTTPException(status_code=400, detail=f"File type not allowed: {orig_name}")
+                if up.content_type and not any(up.content_type.startswith(p) for p in ALLOWED_MIME_PREFIXES):
+                    # Be permissive if content_type missing/misreported; only block obvious mismatches
+                    pass
+
+                safe_name = _sanitize_filename(orig_name)
+                dest_path = _unique_path(dest_dir, safe_name)
+
+                # Compute checksum while writing; also enforce size limit during stream
+                sha256 = hashlib.sha256()
+                total = 0
+                tmp_path = dest_path.with_suffix(dest_path.suffix + '.part')
+                with open(tmp_path, 'wb') as out:
+                    while True:
+                        chunk = up.file.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        total += len(chunk)
+                        if total > MAX_FILE_SIZE:
+                            raise HTTPException(status_code=413, detail=f"File too large: {orig_name}")
+                        sha256.update(chunk)
+                        out.write(chunk)
+                checksum = sha256.hexdigest()
+
+                # Duplicate detection
+                dup = _find_duplicate(manifest, checksum)
+                if dup is not None:
+                    # Remove temp and skip
+                    tmp_path.unlink(missing_ok=True)
+                    skipped.append({
+                        'original_name': orig_name,
+                        'reason': 'duplicate',
+                        'duplicate_of': dup.get('id'),
+                    })
+                    continue
+
+                # Finalize write
+                tmp_path.rename(dest_path)
+
+                doc_id = uuidlib.uuid4().hex
+                rel_path = str(dest_path.relative_to(case_workspace))
+                now = datetime.now(timezone.utc).isoformat()
+                meta = {
+                    'id': doc_id,
+                    'case_id': case_id,
+                    'original_name': orig_name,
+                    'stored_name': dest_path.name,
+                    'rel_path': rel_path,
+                    'size': total,
+                    'mime': up.content_type or None,
+                    'checksum_sha256': checksum,
+                    'target_folder': target_folder,
+                    'tags': tag_list,
+                    'note': note,
+                    'uploaded_at': now,
+                    'source': 'ui',
+                }
+                manifest.setdefault('documents', []).append(meta)
+                uploaded.append(meta)
+
+            except HTTPException as he:
+                errors.append({'file': up.filename, 'error': he.detail, 'status': he.status_code})
+            except Exception as e:
+                errors.append({'file': getattr(up, 'filename', 'unnamed'), 'error': str(e)})
+
+        # Persist manifest
+        _save_manifest(case_root, manifest)
+
+        return JSONResponse(status_code=status.HTTP_201_CREATED, content={
+            'uploaded': uploaded,
+            'skipped': skipped,
+            'errors': errors
+        })
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to upload documents for case {case_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to upload documents: {str(e)}")
+
+
+@router.get("/cases/{case_id}/documents")
+async def list_case_documents(
+    case_id: str,
+    request: Request,
+    folder: Optional[str] = None,
+):
+    try:
+        session_id = request.headers.get('X-Session-ID')
+        if not session_id:
+            raise HTTPException(status_code=401, detail="Missing X-Session-ID header")
+
+        workspace_manager = get_legal_workspace_manager(session_id)
+        if not workspace_manager:
+            raise HTTPException(status_code=500, detail="Workspace manager not initialized for this session")
+
+        if not workspace_manager.case_store:
+            await workspace_manager.initialize()
+
+        if workspace_manager.get_current_case_id() != case_id:
+            raise HTTPException(status_code=403, detail="Session is not in the target case workspace. Enter the case first.")
+
+        case_store = workspace_manager.case_store
+        case_root = Path(case_store.get_case_root_path(case_id))
+        manifest = _load_manifest(case_root)
+        docs = manifest.get('documents', [])
+
+        if folder:
+            if folder not in FOLDER_MAP:
+                raise HTTPException(status_code=400, detail="Invalid folder filter")
+            docs = [d for d in docs if d.get('target_folder') == folder]
+
+        return {'items': docs, 'total': len(docs)}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to list documents for case {case_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to list documents: {str(e)}")

@@ -6,14 +6,17 @@ import { PrefetchPageLinks } from "react-router";
 import { LegalCaseHeader } from "#/components/features/legal-cases/legal-case-header";
 import { CaseList } from "#/components/features/legal-cases/case-list";
 import { CreateCaseModal } from "#/components/features/legal-cases/create-case-modal";
-import { useLegalSystemStatus } from "#/hooks/mutation/use-legal-cases";
+import { useLegalSystemStatus, useCurrentWorkspace } from "#/hooks/mutation/use-legal-cases";
 import { useWorkspaceSync, setupTerminalWorkspaceListener } from "#/hooks/use-workspace-sync";
+
+const CaseDocumentsPanel = React.lazy(() => import("#/components/features/legal-cases/case-documents-panel").then(m => ({ default: m.CaseDocumentsPanel })));
 
 <PrefetchPageLinks page="/conversations/:conversationId" />;
 
 function LegalHomeScreen() {
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
   const { data: systemStatus, isLoading: isLoadingStatus } = useLegalSystemStatus();
+  const { data: currentWorkspace } = useCurrentWorkspace();
 
   // Initialize workspace synchronization for legal home
   const { manualSync } = useWorkspaceSync({
@@ -77,7 +80,7 @@ function LegalHomeScreen() {
               Legal Document System Not Available
             </h2>
             <p className="text-gray-400 mb-4">
-              The legal document management system is not properly initialized. 
+              The legal document management system is not properly initialized.
               Please check the server configuration and ensure all required services are running.
             </p>
             <div className="text-sm text-gray-500 space-y-1">
@@ -100,10 +103,18 @@ function LegalHomeScreen() {
       data-testid="legal-home-screen"
       className="bg-base-secondary h-full flex flex-col rounded-xl px-[42px] pt-[42px] gap-8 overflow-y-auto"
     >
-      <LegalCaseHeader 
+      <LegalCaseHeader
         onCreateCase={handleCreateCase}
         isCreatingCase={false}
       />
+
+        {/* Show documents panel if currently in a case workspace */}
+        {currentWorkspace?.current_case_id && (
+          <React.Suspense fallback={<div className="text-sm text-gray-500">Loading documents…</div>}>
+            <CaseDocumentsPanel caseId={currentWorkspace.current_case_id} />
+          </React.Suspense>
+        )}
+
 
       <hr className="border-[#717888]" />
 

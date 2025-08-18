@@ -31,7 +31,7 @@ export function ConversationTabs() {
       labels={[
         {
           label: t(I18nKey.WORKSPACE$TERMINAL_TAB_LABEL),
-          to: "terminal",
+          to: "",
           icon: <TerminalIcon />,
         },
       ]}

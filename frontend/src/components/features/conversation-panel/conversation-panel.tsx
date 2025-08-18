@@ -1,5 +1,5 @@
 import React from "react";
-import { NavLink, useParams, useNavigate } from "react-router";
+import { useParams, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 import { I18nKey } from "#/i18n/declaration";
 import { ConversationCard } from "./conversation-card";
@@ -148,14 +148,15 @@ export function ConversationPanel({ onClose }: ConversationPanelProps) {
         </div>
       )}
       {conversations?.map((project) => (
-        <NavLink
+        <a
           key={project.conversation_id}
-          to={`/conversations/${project.conversation_id}`}
-          onClick={onClose}
+          href={`/conversations/${project.conversation_id}`}
+          onClick={() => {
+            onClose();
+          }}
         >
-          {({ isActive }) => (
-            <ConversationCard
-              isActive={isActive}
+          <ConversationCard
+              isActive={currentConversationId === project.conversation_id}
               onDelete={() => handleDeleteProject(project.conversation_id)}
               onStop={() => handleStopConversation(project.conversation_id)}
               onChangeTitle={(title) =>
@@ -176,8 +177,7 @@ export function ConversationPanel({ onClose }: ConversationPanelProps) {
                 setOpenContextMenuId(isOpen ? project.conversation_id : null)
               }
             />
-          )}
-        </NavLink>
+        </a>
       ))}
 
       {/* Loading indicator for fetching more conversations */}

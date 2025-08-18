@@ -1,10 +1,5 @@
 import React from "react";
 import { PrefetchPageLinks } from "react-router";
-import { HomeHeader } from "#/components/features/home/home-header";
-import { RepoConnector } from "#/components/features/home/repo-connector";
-import { TaskSuggestions } from "#/components/features/home/tasks/task-suggestions";
-import { useUserProviders } from "#/hooks/use-user-providers";
-import { GitRepository } from "#/types/git";
 import { useWorkspaceSync, setupTerminalWorkspaceListener } from "#/hooks/use-workspace-sync";
 
 // Legal case components (conditional imports)
@@ -17,19 +12,35 @@ const CaseList = React.lazy(() =>
 const CreateCaseModal = React.lazy(() =>
   import("#/components/features/legal-cases/create-case-modal").then(module => ({ default: module.CreateCaseModal }))
 );
+const CaseDocumentsPanel = React.lazy(() =>
+  import("#/components/features/legal-cases/case-documents-panel").then(module => ({ default: module.CaseDocumentsPanel }))
+);
 
 <PrefetchPageLinks page="/conversations/:conversationId" />;
 
-function HomeScreen() {
-  const { providers } = useUserProviders();
-  const [selectedRepo, setSelectedRepo] = React.useState<GitRepository | null>(
-    null,
+
+function CurrentCaseDocuments() {
+  const [currentCaseId, setCurrentCaseId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    fetch('/api/legal/workspace/current', { headers: { 'X-Session-ID': 'legal_home' } })
+      .then(res => res.json())
+      .then(data => setCurrentCaseId(data?.current_case_id || null))
+      .catch(() => setCurrentCaseId(null));
+  }, []);
+
+  if (!currentCaseId) return null;
+
+  return (
+    <React.Suspense fallback={<div className="text-sm text-gray-500">Loading documents…</div>}>
+      <CaseDocumentsPanel caseId={currentCaseId} />
+    </React.Suspense>
   );
-  const [mode, setMode] = React.useState<'repository' | 'legal'>('repository');
+}
+
+function HomeScreen() {
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
   const [workspaceState, setWorkspaceState] = React.useState<any>(null);
-
-  const providersAreSet = providers.length > 0;
 
   // Initialize workspace synchronization
   const { manualSync, resetTerminalState, currentSessionInfo } = useWorkspaceSync({
@@ -49,29 +60,8 @@ function HomeScreen() {
     return cleanup;
   }, []);
 
-  // Handle mode changes with workspace sync
-  const handleModeChange = React.useCallback((newMode: 'repository' | 'legal') => {
-    setMode(newMode);
-    // Trigger manual sync when mode changes
-    setTimeout(() => {
-      manualSync();
-    }, 100);
-  }, [manualSync]);
-
-  // Check if legal system is available
-  const [legalSystemAvailable, setLegalSystemAvailable] = React.useState(false);
-
-  React.useEffect(() => {
-    // Check if legal system is available
-    fetch('/api/legal/system/status')
-      .then(res => res.json())
-      .then(data => {
-        setLegalSystemAvailable(data.system_initialized);
-      })
-      .catch(() => {
-        setLegalSystemAvailable(false);
-      });
-  }, []);
+  // Legal system is always available - no need to check
+  const [legalSystemAvailable, setLegalSystemAvailable] = React.useState(true);
 
   const handleCreateCase = () => {
     setIsCreateModalOpen(true);
@@ -90,54 +80,15 @@ function HomeScreen() {
       data-testid="home-screen"
       className="bg-base-secondary h-full flex flex-col rounded-xl px-[42px] pt-[42px] gap-8 overflow-y-auto"
     >
-      {/* Mode Toggle */}
+      {/* Legal Cases Dashboard - Always Visible */}
       {legalSystemAvailable && (
-        <div className="flex justify-center mb-4">
-          <div className="bg-base-primary rounded-lg p-1 flex">
-            <button
-              onClick={() => handleModeChange('repository')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                mode === 'repository'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Repository Mode
-            </button>
-            <button
-              onClick={() => handleModeChange('legal')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                mode === 'legal'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              Legal Cases
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Repository Mode (Original) */}
-      {mode === 'repository' && (
-        <>
-          <HomeHeader />
-          <hr className="border-[#717888]" />
-          <main className="flex flex-col lg:flex-row justify-between gap-8">
-            <RepoConnector onRepoSelection={(repo) => setSelectedRepo(repo)} />
-            <hr className="md:hidden border-[#717888]" />
-            {providersAreSet && <TaskSuggestions filterFor={selectedRepo} />}
-          </main>
-        </>
-      )}
-
-      {/* Legal Mode */}
-      {mode === 'legal' && legalSystemAvailable && (
         <React.Suspense fallback={<div className="text-center py-8">Loading legal system...</div>}>
           <LegalCaseHeader
             onCreateCase={handleCreateCase}
             isCreatingCase={false}
           />
+          {/* If currently in a case workspace, show documents panel */}
+          <CurrentCaseDocuments />
           <hr className="border-[#717888]" />
           <main className="flex flex-col gap-8">
             <CaseList onCreateCase={handleCreateCase} />
@@ -151,7 +102,7 @@ function HomeScreen() {
       )}
 
       {/* Legal System Not Available */}
-      {mode === 'legal' && !legalSystemAvailable && (
+      {!legalSystemAvailable && (
         <div className="flex items-center justify-center h-full">
           <div className="text-center max-w-md">
             <div className="mb-4">
@@ -165,12 +116,6 @@ function HomeScreen() {
             <p className="text-gray-400 mb-4">
               The legal document management system is not initialized. Please check the server configuration.
             </p>
-            <button
-              onClick={() => setMode('repository')}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Switch to Repository Mode
-            </button>
           </div>
         </div>
       )}
@@ -179,3 +124,4 @@ function HomeScreen() {
 }
 
 export default HomeScreen;
+

@@ -40,7 +40,7 @@ export function TaskCard({ task }: TaskCardProps) {
       },
       {
         onSuccess: (data) => {
-          navigate(`/conversations/${data.conversation_id}`);
+          window.location.href = `/conversations/${data.conversation_id}`;
         },
       },
     );

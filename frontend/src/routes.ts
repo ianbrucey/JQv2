@@ -22,7 +22,6 @@ export default [
     route("conversations/:conversationId", "routes/conversation.tsx", [
       // Terminal is the only tab; make it the default index route
       index("routes/terminal-tab.tsx"),
-      route("terminal", "routes/terminal-tab.tsx"),
     ]),
     route("microagent-management", "routes/microagent-management.tsx"),
   ]),

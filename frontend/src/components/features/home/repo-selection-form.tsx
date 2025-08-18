@@ -164,7 +164,7 @@ export function RepositorySelectionForm({
             },
             {
               onSuccess: (data) =>
-                navigate(`/conversations/${data.conversation_id}`),
+                (window.location.href = `/conversations/${data.conversation_id}`),
             },
           )
         }

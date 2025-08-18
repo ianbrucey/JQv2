@@ -59,7 +59,7 @@ export function useCreateLegalCase() {
     onSuccess: (newCase: LegalCase) => {
       // Invalidate and refetch cases list
       queryClient.invalidateQueries({ queryKey: legalCaseKeys.lists() });
-      
+
       // Add the new case to the cache
       queryClient.setQueryData(legalCaseKeys.detail(newCase.case_id), newCase);
     },
@@ -74,7 +74,7 @@ export function useEnterLegalCase() {
     onSuccess: (data, caseId) => {
       // Invalidate workspace query to reflect new state
       queryClient.invalidateQueries({ queryKey: legalCaseKeys.workspace() });
-      
+
       // Update the case's last_accessed_at in cache
       queryClient.invalidateQueries({ queryKey: legalCaseKeys.detail(caseId) });
       queryClient.invalidateQueries({ queryKey: legalCaseKeys.lists() });
@@ -107,3 +107,30 @@ export function useDeleteLegalCase() {
     },
   });
 }
+
+// Documents hooks
+export function useUploadCaseDocuments(caseId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (params: { files: File[]; targetFolder: 'inbox' | 'exhibits' | 'research' | 'active_drafts'; tags?: string[]; note?: string }) =>
+      legalCaseAPI.uploadDocuments(caseId, params.files, { targetFolder: params.targetFolder, tags: params.tags, note: params.note }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: legalCaseKeys.workspace() });
+      // Invalidate a future documents list key if we add a dedicated key later
+    },
+  });
+}
+
+export function useListCaseDocuments(
+  caseId: string,
+  folder?: 'inbox' | 'exhibits' | 'research' | 'active_drafts',
+  options?: { enabled?: boolean }
+) {
+  return useQuery({
+    queryKey: ['legal-cases', 'documents', caseId, folder ?? 'all'],
+    queryFn: () => legalCaseAPI.listDocuments(caseId),
+    enabled: (options?.enabled ?? true) && !!caseId,
+    staleTime: 10000,
+  });
+}
+
