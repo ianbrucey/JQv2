@@ -526,35 +526,73 @@ class Session:
     async def _configure_legal_runtime_with_case_detection(
         self, config: OpenHandsConfig, conversation_instructions: str | None = None
     ) -> OpenHandsConfig:
-        """Detect legal case context and configure runtime before initialization."""
+        """Simple direct approach: Query conversation metadata for case_id and set workspace."""
 
-        # First, try to detect if this is a legal case conversation
-        case_id = None
-        if conversation_instructions:
-            import re
-            case_id_match = re.search(r'Case ID:\s*([a-f0-9-]+)', conversation_instructions)
-            if case_id_match:
-                case_id = case_id_match.group(1)
-                self.logger.info(f"🏛️ Detected legal case conversation for case: {case_id}")
+        try:
+            # Step 1: Query conversation metadata to get case_id
+            from openhands.storage.conversation.file_conversation_store import FileConversationStore
 
-        # If we detected a case ID, configure the workspace before runtime creation
-        if case_id and self.legal_workspace_manager:
+            # Get conversation store
+            conversation_store = await FileConversationStore.get_instance(config, self.user_id)
+
+            # Get conversation metadata
             try:
-                # Initialize workspace manager if not already done
-                if not self.legal_workspace_manager.case_store:
-                    await self.legal_workspace_manager.initialize(self.user_id)
+                metadata = await conversation_store.get_metadata(self.sid)
+                case_id = metadata.case_id
 
-                # Enter the case workspace
-                result = await self.legal_workspace_manager.enter_case_workspace(case_id)
-                self.logger.info(f"🏛️ Automatically entered case workspace: {result}")
+                if case_id:
+                    self.logger.info(f"🏛️ Found case_id in conversation metadata: {case_id}")
 
-                # Apply legal runtime configuration with the case workspace
-                config = await self._configure_legal_runtime_if_needed(config)
+                    # Step 2: Construct workspace path directly
+                    case_workspace_path = f"/tmp/legal_workspace/cases/case-{case_id}/draft_system"
 
-                return config
+                    # Step 3: Set workspace_base directly in config
+                    legal_config = config.model_copy(deep=True)
+                    legal_config.runtime = "local"  # Use LocalRuntime for instant startup
+                    legal_config.workspace_base = case_workspace_path
+                    legal_config.workspace_mount_path = case_workspace_path
+                    legal_config.workspace_mount_path_in_sandbox = "/workspace"
+                    legal_config.sandbox.volumes = f"{case_workspace_path}:/workspace:rw"
+
+                    # Set environment variables
+                    if not legal_config.sandbox.runtime_startup_env_vars:
+                        legal_config.sandbox.runtime_startup_env_vars = {}
+
+                    legal_config.sandbox.runtime_startup_env_vars.update({
+                        'OH_CASE_WORKSPACE': case_workspace_path,
+                        'LEGAL_CASE_ID': case_id,
+                        'WORKSPACE_BASE': case_workspace_path,
+                        'LEGAL_WORKSPACE_ROOT': '/tmp/legal_workspace',
+                        'DRAFT_SYSTEM_PATH': '/tmp/draft_system',
+                    })
+
+                    # Create sentinel file
+                    from pathlib import Path
+                    import json
+                    Path(case_workspace_path).mkdir(parents=True, exist_ok=True)
+                    sentinel_path = Path(case_workspace_path) / '.case_workspace.json'
+                    sentinel_data = {
+                        'case_id': case_id,
+                        'workspace_path': case_workspace_path,
+                        'session_id': self.sid
+                    }
+                    sentinel_path.write_text(json.dumps(sentinel_data, indent=2))
+
+                    self.logger.info(
+                        f"🏛️ Legal Workspace Configured:\n"
+                        f"  • Case ID: {case_id}\n"
+                        f"  • Workspace: {case_workspace_path}\n"
+                        f"  • Runtime: LocalRuntime\n"
+                        f"  • Environment: OH_CASE_WORKSPACE set"
+                    )
+
+                    return legal_config
 
             except Exception as e:
-                self.logger.warning(f"Failed to auto-configure legal case workspace: {e}")
+                self.logger.debug(f"No conversation metadata found or no case_id: {e}")
 
-        # Fallback to regular legal runtime configuration
-        return await self._configure_legal_runtime_if_needed(config)
+        except Exception as e:
+            self.logger.warning(f"Failed to configure legal workspace: {e}")
+
+        # Fallback to regular configuration
+        return config
