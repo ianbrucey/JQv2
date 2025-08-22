@@ -9,7 +9,14 @@
   @page {
     size: letter;
     margin: 1in;
+    @bottom-right {
+      content: counter(page);
+      font-family: "Times New Roman", serif;
+      font-size: 12pt;
+    }
   }
+
+
   html, body {
     background: #fff;
   }
@@ -57,7 +64,7 @@
     padding: 0.1in 0;
   }
   .parties {
-    width: 60%;
+    width: 50%;
     padding-right: 0.2in;
   }
   .parties .name {
@@ -68,11 +75,11 @@
     text-transform: uppercase;
   }
   .vline {
-    width: 2%;
+    width: 0%;
     border-left: 1px solid #000;
   }
   .meta {
-    width: 38%;
+    width: 50%;
     padding-left: 0.2in;
   }
   .meta .label {

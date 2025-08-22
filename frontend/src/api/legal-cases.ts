@@ -61,6 +61,8 @@ class LegalCaseAPI {
     return response.json();
   }
 
+
+
   async getCase(caseId: string): Promise<LegalCase> {
     const response = await fetch(`${this.baseUrl}/cases/${caseId}`);
 
@@ -167,7 +169,7 @@ class LegalCaseAPI {
     if (options.tags && options.tags.length) form.append('tags', JSON.stringify(options.tags));
     if (options.note) form.append('note', options.note);
 
-    const response = await fetch(`${this.baseUrl}/cases/${caseId}/documents/upload`, {
+    const response = await fetch(`${this.baseUrl}/cases/${caseId}/documents`, {
       method: 'POST',
       headers: {
         'X-Session-ID': options.sessionId || getSessionIdForCase(caseId),

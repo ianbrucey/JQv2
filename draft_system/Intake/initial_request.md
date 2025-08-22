@@ -1,49 +1,49 @@
-# Initial Request - Hilton Timeshare Case
+# Initial Request - [Case Name]
 
 ## User's Initial Description
-**Date**: December 15, 2024
-**Requestor**: Ian Bruce
+**Date**: [Date]
+**Requestor**: [Client Name]
 
 ## What the User Wants to Accomplish
-The user wants to file a lawsuit against Hilton Resorts Corporation and Hilton Grand Vacations Inc. for violations related to timeshare sales practices and consumer protection laws.
+[Description of what the user wants to achieve with this legal matter]
 
 ## Primary Legal Issues Identified
-1. **TRID Violations** - Truth in Lending Act disclosure violations
-2. **Wrongful Foreclosure** - Improper foreclosure proceedings
-3. **FCRA Violations** - Fair Credit Reporting Act violations
-4. **Breach of Good Faith and Fair Dealing** - Contract violations
-5. **Deceptive Trade Practices** - Consumer protection violations
+1. **[Legal Issue 1]** - [Brief description]
+2. **[Legal Issue 2]** - [Brief description]
+3. **[Legal Issue 3]** - [Brief description]
+4. **[Legal Issue 4]** - [Brief description]
+5. **[Legal Issue 5]** - [Brief description]
 
 ## Requested Relief
-- Monetary damages for violations
-- Statutory damages under federal consumer protection laws
-- Attorney's fees and costs
-- Injunctive relief to prevent future violations
-- Punitive damages where applicable
+- [Type of relief sought]
+- [Additional relief requested]
+- [Monetary damages if applicable]
+- [Injunctive relief if applicable]
+- [Other remedies sought]
 
 ## Jurisdiction Preference
-- **Preferred**: State superior court (user managing 3 federal cases already)
-- **Location**: Nevada (where timeshare property located)
-- **Court**: District Court of Clark County, Nevada
+- **Preferred**: [Court preference and reasoning]
+- **Location**: [Geographic jurisdiction]
+- **Court**: [Specific court name]
 
 ## Timeline and Urgency
-- **Priority**: High
-- **Statute of Limitations**: Need to verify for each claim
-- **Immediate Needs**: Draft complaint for filing
+- **Priority**: [High/Medium/Low]
+- **Statute of Limitations**: [Status of limitations research]
+- **Immediate Needs**: [Urgent requirements]
 
 ## User Background
-- **Location**: Lawrenceville, Georgia
-- **Representation**: Pro Se
-- **Experience**: Currently managing multiple federal cases
-- **Preference**: State court litigation over federal court
+- **Location**: [Client location]
+- **Representation**: [Pro Se/Attorney representation]
+- **Experience**: [Legal experience level]
+- **Preference**: [Any specific preferences]
 
 ## Initial Documents Provided
-- Credit denial letters (evidence for damages)
-- Timeshare documentation
-- Correspondence with Hilton entities
+- [Document type 1] ([relevance])
+- [Document type 2] ([relevance])
+- [Document type 3] ([relevance])
 
 ## Special Instructions
-- Focus on a few core issues rather than overly complex analysis
-- Prefer separate documents for each legal claim
-- Need court-acceptable Word documents with proper formatting
-- Automated document generation preferred to minimize manual work
+- [Special instruction 1]
+- [Special instruction 2]
+- [Special instruction 3]
+- [Special instruction 4]

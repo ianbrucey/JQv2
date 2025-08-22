@@ -222,10 +222,25 @@ class FileLegalCaseStore(LegalCaseStore):
         await self._save_case_metadata(case)
     
     async def delete_case(self, case_id: str) -> None:
-        """Delete a legal case and its workspace."""
+        """Delete a legal case, its workspace, and associated conversations."""
+        # Get case info before deletion to access conversation_id
+        case = await self.get_case(case_id)
+
+        # Delete the case workspace directory
         case_dir = self.cases_dir / f"case-{case_id}"
         if case_dir.exists():
             shutil.rmtree(case_dir)
+
+        # Clean up conversation if it exists
+        if case and case.conversation_id:
+            try:
+                # Import here to avoid circular imports
+                from openhands.storage.conversation import get_file_store
+                conversation_store = get_file_store()
+                await conversation_store.delete_conversation(case.conversation_id)
+            except Exception as e:
+                # Log but don't fail the case deletion if conversation cleanup fails
+                print(f"Warning: Failed to delete conversation {case.conversation_id} for case {case_id}: {e}")
     
     async def list_cases(self, user_id: str | None = None) -> List[LegalCase]:
         """List all cases for a user."""

@@ -4,7 +4,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
-import { useLegalCases, useEnterLegalCase, useCurrentWorkspace } from '#/hooks/mutation/use-legal-cases';
+import { useLegalCases, useEnterLegalCase, useCurrentWorkspace, useDeleteLegalCase } from '#/hooks/mutation/use-legal-cases';
 import { useCreateConversation } from '#/hooks/mutation/use-create-conversation';
 import { LegalCase } from '#/api/legal-cases';
 import { formatDistanceToNow } from 'date-fns';
@@ -19,6 +19,7 @@ export function CaseList({ onCreateCase }: CaseListProps) {
   const { data: cases, isLoading, error } = useLegalCases();
   const { data: currentWorkspace } = useCurrentWorkspace();
   const { mutate: enterCase, isPending: isEnteringCase } = useEnterLegalCase();
+  const { mutate: deleteCase, isPending: isDeletingCase } = useDeleteLegalCase();
   const { mutate: createConversation } = useCreateConversation();
 
   const handleEnterCase = (caseItem: LegalCase) => {
@@ -45,6 +46,28 @@ This conversation is for legal document management and case work. The system is 
         );
       },
     });
+  };
+
+  const handleDeleteCase = (caseItem: LegalCase, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent triggering the case enter action
+
+    if (isDeletingCase) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${caseItem.title}"?\n\nThis will permanently delete:\n- The case and all its data\n- All workspace files and documents\n- Associated conversations\n\nThis action cannot be undone.`
+    );
+
+    if (confirmed) {
+      deleteCase(caseItem.case_id, {
+        onSuccess: () => {
+          console.log(`Case ${caseItem.case_id} deleted successfully`);
+        },
+        onError: (error) => {
+          console.error('Failed to delete case:', error);
+          alert('Failed to delete case. Please try again.');
+        }
+      });
+    }
   };
 
   const formatLastAccessed = (dateString?: string) => {
@@ -200,6 +223,20 @@ This conversation is for legal document management and case work. The system is 
                 </div>
                 
                 <div className="flex items-center gap-2 ml-4">
+                  <button
+                    onClick={(e) => handleDeleteCase(caseItem, e)}
+                    disabled={isDeletingCase}
+                    className="p-2 text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded border border-red-500/50 transition-colors"
+                    title="Delete case"
+                  >
+                    {isDeletingCase ? (
+                      <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    )}
+                  </button>
                   {isEnteringCase && (
                     <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                   )}

@@ -1,3 +1,683 @@
+# Enhanced Draft System Agent Guidelines
+# Version 2.0 - User Onboarding and Workflow Management System
+
+## System Overview
+You are working within the draft_system, a professional legal document generation system that uses a unified HTML-first workflow. This system generates court-ready PDF and Word documents from standardized markdown content.
+
+## CRITICAL: Initial User Interaction Protocol
+**BEFORE starting any work, you MUST determine the user's workflow mode:**
+
+### Mode Detection Process
+1. **Assess User Experience Level**
+   - Ask about legal document drafting experience
+   - Determine familiarity with draft_system
+   - Identify current case status (new vs. existing)
+
+2. **Present Mode Options**
+   - Explain both Guided Mode and Freehand Mode
+   - Provide clear examples of when each is appropriate
+   - Allow user to choose or recommend based on assessment
+
+3. **Confirm Mode Selection**
+   - Document chosen mode in Case_Summary_and_Timeline.md
+   - Set appropriate agent behavior for selected mode
+   - Inform user they can switch modes at any time
+
+## WORKFLOW MODES
+
+### **GUIDED MODE (Structured Workflow)**
+**Target Audience**: New users, complex cases, users preferring step-by-step guidance
+
+**Agent Behavior in Guided Mode**:
+- Lead the conversation with structured questions
+- Provide educational explanations for each step
+- Offer multiple options with recommendations
+- Validate understanding before proceeding
+- Create all folder structures automatically
+- Provide progress tracking and next-step indicators
+- Include quality checkpoints at each phase
+
+**Workflow Phases**:
+1. **Pre-Draft Setup**: Case initiation and folder creation
+2. **Research and Analysis**: Guided legal research and fact development
+3. **Content Creation**: Section-by-section drafting with explanations
+4. **Document Generation**: Validation, preview, and final generation
+5. **Quality Assurance**: Review and finalization with educational components
+
+### **FREEHAND MODE (Expert/Flexible Workflow)**
+**Target Audience**: Experienced users, quick tasks, users familiar with draft_system
+
+**Agent Behavior in Freehand Mode**:
+- Respond to user-directed requests
+- Provide minimal explanations unless requested
+- Assume familiarity with standards and processes
+- Offer quick-start options for common entry points
+- Maintain quality standards without extensive guidance
+- Provide validation feedback without educational content
+
+**Common Entry Points**:
+- "I have research and want to draft [document type]"
+- "I need to add a motion to existing case"
+- "Generate final documents for [document folder]"
+- "Validate and fix formatting for [document]"
+
+## MODE-SPECIFIC WORKFLOWS
+
+### **Guided Mode: Brand New Case Workflow**
+
+#### **Phase 1: Pre-Draft Setup and Case Initiation**
+**Agent Actions**:
+1. **Welcome and Orientation**
+   ```
+   "Welcome to the draft_system! I'll guide you through creating a professional legal case from start to finish. 
+   
+   First, let me create your case folder structure and gather the essential information we'll need."
+   ```
+
+2. **Case Setup Interview**
+   - Ask structured questions about case basics
+   - Gather party information, court preferences, case type
+   - Collect preliminary documents and evidence
+   - Create complete folder structure automatically
+
+3. **Educational Components**
+   - Explain folder structure and purpose
+   - Introduce draft_system standards and quality requirements
+   - Preview the complete workflow and timeline
+
+#### **Phase 2: Research and Analysis Phase**
+**Agent Actions**:
+1. **Research Planning**
+   ```
+   "Now let's develop the legal foundation for your case. I'll guide you through:
+   - Identifying applicable laws and regulations
+   - Researching relevant case precedents
+   - Organizing your facts and evidence
+   - Planning your legal strategy"
+   ```
+
+2. **Guided Research Process**
+   - Suggest research topics based on case facts
+   - Provide templates for research organization
+   - Explain legal concepts and requirements
+   - Help organize evidence by legal theory
+
+3. **Quality Checkpoints**
+   - Review research completeness
+   - Validate legal theories and supporting evidence
+   - Confirm strategy before proceeding to drafting
+
+#### **Phase 3: Content Creation Phase**
+**Agent Actions**:
+1. **Document Planning**
+   ```
+   "Let's plan your [document type]. I'll help you:
+   - Choose the right document structure
+   - Plan each section and its purpose
+   - Organize your arguments effectively
+   - Ensure all required elements are included"
+   ```
+
+2. **Section-by-Section Guidance**
+   - Explain purpose and requirements for each section
+   - Provide examples and templates
+   - Guide content development with legal standards
+   - Ensure proper cross-referencing and formatting
+
+3. **Educational Elements**
+   - Explain legal writing principles
+   - Teach proper citation formatting
+   - Demonstrate cross-reference system
+   - Show quality standards in action
+
+#### **Phase 4: Document Generation Phase**
+**Agent Actions**:
+1. **Validation and Quality Assurance**
+   ```
+   "Let's ensure your document meets all professional standards:
+   - Checking formatting compliance
+   - Validating cross-references
+   - Reviewing legal citations
+   - Confirming document structure"
+   ```
+
+2. **Preview and Review Process**
+   - Generate HTML preview with explanation
+   - Guide review process with checklist
+   - Explain what to look for in quality review
+   - Address any issues found
+
+3. **Final Generation**
+   - Generate final PDF and Word documents
+   - Explain output locations and naming
+   - Provide next steps for filing or service
+
+#### **Phase 5: Quality Assurance and Next Steps**
+**Agent Actions**:
+1. **Comprehensive Review**
+   - Guide final document review process
+   - Provide quality assurance checklist
+   - Explain court-specific requirements
+   - Confirm readiness for filing
+
+2. **Case Management Updates**
+   - Update Case_Summary_and_Timeline.md
+   - Document lessons learned and preferences
+   - Plan next steps and deadlines
+   - Prepare for future documents
+
+### **Freehand Mode: Flexible Entry Points**
+
+#### **Quick-Start Options**
+**Agent provides menu of common entry points**:
+```
+"I can help you with:
+1. Start new case from scratch
+2. Add document to existing case  
+3. Generate final documents from existing drafts
+4. Validate and fix document formatting
+5. Research specific legal issue
+6. Create document outline
+7. Other (please specify)"
+```
+
+#### **Existing Case with New Document**
+**Agent Actions**:
+1. **Context Review**
+   - Read Case_Summary_and_Timeline.md
+   - Identify relevant existing materials
+   - Confirm new document requirements
+
+2. **Efficient Integration**
+   - Create new document folder structure
+   - Plan reallegation strategy
+   - Leverage existing research and facts
+   - Focus on document-specific requirements
+
+3. **Streamlined Generation**
+   - Minimal validation explanations
+   - Quick preview and review
+   - Direct final document generation
+
+## CORE WORKFLOW (BOTH MODES)
+The system uses a streamlined 3-step process:
+
+### Step 1: Validate and Fix
+```bash
+# ALWAYS activate virtual environment first
+source venv/bin/activate
+
+python scripts/format_validator.py active_drafts/document_folder/ standard
+python scripts/format_fixer.py active_drafts/document_folder/
+```
+
+### Step 2: Generate Preview (Manual HTML Creation)
+```
+AI Agent manually creates HTML preview using str-replace-editor tool
+Output location: active_drafts/[draft_type]/html_preview/[document]-preview.html
+DEPRECATED: universal_preview_generator.py script is no longer used
+```
+
+### Step 3: Generate Finals
+```bash
+python scripts/generate_final_document.py active_drafts/document_folder/ both
+# Outputs to: final_documents/name_YYYYMMDD_HHMMSS.pdf and .docx
+```
+
+## MODE SWITCHING
+**Users can switch modes at any time**:
+- **To Guided**: "I'd like more guidance on this step"
+- **To Freehand**: "I'm familiar with this process, let's move quickly"
+- **Agent Response**: Acknowledge switch and adjust behavior immediately
+
+## QUALITY STANDARDS (BOTH MODES)
+**All modes maintain identical quality requirements**:
+- All paragraphs use `**number.**` format
+- All cross-references resolve to valid labels
+- All headers follow H1/H2/H3 hierarchy only
+- All legal citations properly formatted
+- Professional legal tone throughout
+
+**Mode Differences in Quality Assurance**:
+- **Guided Mode**: Detailed explanations of why standards exist
+- **Freehand Mode**: Quick validation feedback without extensive explanations
+
+## CONTEXT PRESERVATION (BOTH MODES)
+**Always maintain case continuity**:
+- Read Case_Summary_and_Timeline.md before starting work
+- Update timeline after significant events
+- Document user preferences and successful patterns
+- Maintain agent context notes for future sessions
+
+## EMERGENCY PROCEDURES (BOTH MODES)
+**If user seems confused or lost**:
+1. Offer to switch to Guided Mode
+2. Provide quick orientation to current status
+3. Offer step-by-step assistance
+4. Reference documentation and help resources
+
+**If standards conflict**:
+1. Refer to standards/markdown_formatting_guide.md
+2. Choose most conservative/formal option
+3. Explain reasoning in mode-appropriate detail
+
+This enhanced system ensures the draft_system is accessible to users of all experience levels while maintaining the highest standards of legal document quality and professional formatting.
+
+## DOCUMENT PROCESSING SYSTEM
+
+### **Document Upload and Processing Workflow**
+
+When users upload documents to `Intake/preliminary_docs/` or any other folder, AI agents must follow this systematic processing approach:
+
+#### **Step 1: Document Assessment**
+1. **Identify Document Type**:
+   - PDF files (text-based or scanned)
+   - Image files (JPG, PNG, TIFF, etc.)
+   - Word documents (.docx, .doc)
+   - Text files (.txt, .md)
+   - Other formats (Excel, PowerPoint, etc.)
+
+2. **Determine Processing Method**:
+   - Text-based PDFs → Direct text extraction
+   - Scanned PDFs/Images → OCR processing
+   - Word documents → Text extraction
+   - Unknown/unclear destination → Temporary processing area
+
+#### **Step 2: Two-Tier PDF Processing System**
+
+**Primary Method: PDF-to-Text Extraction**
+```python
+# Use PyPDF2 or similar for text-based PDFs
+import PyPDF2
+def extract_pdf_text(pdf_path):
+    with open(pdf_path, 'rb') as file:
+        reader = PyPDF2.PdfReader(file)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text()
+    return text
+```
+
+**Fallback Method: Tesseract OCR**
+```python
+# Use when PDF text extraction fails or returns minimal text
+import pytesseract
+from PIL import Image
+import pdf2image
+
+def ocr_pdf(pdf_path):
+    pages = pdf2image.convert_from_path(pdf_path)
+    text = ""
+    for page in pages:
+        text += pytesseract.image_to_string(page)
+    return text
+```
+
+**Decision Logic**:
+- If PDF text extraction returns < 100 characters → Use OCR
+- If PDF text extraction returns garbled/encoded text → Use OCR
+- If PDF is image-based (scanned) → Use OCR directly
+
+#### **Step 3: Image Processing**
+For image files (JPG, PNG, TIFF, etc.):
+```python
+def process_image(image_path):
+    image = Image.open(image_path)
+    # Preprocessing for better OCR results
+    image = image.convert('L')  # Convert to grayscale
+    text = pytesseract.image_to_string(image)
+    return text
+```
+
+#### **Step 4: Document Classification and Routing**
+
+**Classification Categories**:
+1. **Legal Documents**: Contracts, court filings, correspondence
+2. **Evidence**: Photos, receipts, records, communications
+3. **Research Materials**: Case law, statutes, articles
+4. **Administrative**: Forms, applications, notices
+
+**Routing Logic**:
+- **Clear Legal Documents** → `active_drafts/[relevant_document]/exhibits/`
+- **General Evidence** → `exhibits_master/`
+- **Research Materials** → `case_resources/[appropriate_subfolder]/`
+- **Unclear/Mixed** → `Intake/preliminary_docs/processed/` (temporary holding)
+
+#### **Step 5: Three-File System Implementation**
+
+For each processed document, create:
+
+1. **Original File**: `[name]_original.[ext]`
+   - Preserve original document unchanged
+   - Maintain original filename and metadata
+
+2. **Extracted Text**: `[name]_text.txt`
+   - Clean, formatted text extraction
+   - Remove excessive whitespace and formatting artifacts
+   - Preserve paragraph structure where possible
+
+3. **Summary File**: `[name]_summary.md`
+   - Document description and analysis
+   - Legal relevance assessment
+   - Key points extraction
+   - Cross-reference suggestions
+
+### **Document Processing Templates**
+
+#### **Summary Template for Legal Documents**:
+```markdown
+# Document Summary: [Document Name]
+
+## Document Information
+- **Original Filename**: [filename]
+- **Document Type**: [Contract/Court Filing/Correspondence/etc.]
+- **Date**: [document date if available]
+- **Source**: [where obtained]
+- **Processing Date**: [current date]
+- **Processing Method**: [Text Extraction/OCR/Manual]
+
+## Content Summary
+[2-3 sentence summary of document contents]
+
+## Legal Relevance
+[How this document relates to the case - claims, defenses, evidence]
+
+## Key Information Extracted
+- **Parties**: [names mentioned]
+- **Dates**: [important dates]
+- **Amounts**: [monetary amounts if any]
+- **Legal Issues**: [legal concepts or claims mentioned]
+
+## Recommended Actions
+- [ ] [Suggested next steps]
+- [ ] [Additional research needed]
+- [ ] [Cross-reference with other documents]
+
+## Cross-References
+- **Related Documents**: [other exhibits or documents]
+- **Supports Claims**: [which legal arguments this supports]
+- **Contradicts**: [any conflicting information]
+```
+
+#### **Summary Template for Evidence**:
+```markdown
+# Evidence Summary: [Document Name]
+
+## Document Information
+- **Original Filename**: [filename]
+- **Evidence Type**: [Photo/Receipt/Record/Communication/etc.]
+- **Date**: [when evidence was created]
+- **Source**: [where obtained]
+- **Processing Date**: [current date]
+
+## Description
+[What this evidence shows or proves]
+
+## Relevance to Case
+[How this evidence supports legal arguments]
+
+## Authentication Notes
+[Information needed to authenticate this evidence in court]
+
+## Key Details
+- [Important detail 1]
+- [Important detail 2]
+- [Important detail 3]
+
+## Recommended Use
+[How this evidence should be used in legal documents]
+```
+
+### **Quality Control and Validation**
+
+#### **Text Extraction Validation**:
+1. **Length Check**: Extracted text should be reasonable length
+2. **Readability Check**: Text should be coherent and readable
+3. **Completeness Check**: Compare with original document visually
+4. **Character Encoding**: Ensure proper UTF-8 encoding
+
+#### **OCR Quality Assessment**:
+1. **Confidence Scoring**: Use OCR confidence metrics when available
+2. **Manual Review**: Flag low-confidence extractions for review
+3. **Error Patterns**: Identify common OCR errors (0/O, 1/l, etc.)
+4. **Formatting Preservation**: Maintain document structure where possible
+
+### **Error Handling and Fallbacks**
+
+#### **Processing Failures**:
+1. **PDF Extraction Fails** → Try OCR → Manual review if needed
+2. **OCR Fails** → Flag for manual processing
+3. **Unknown Format** → Convert to PDF if possible → Process as PDF
+4. **Corrupted Files** → Request re-upload from user
+
+#### **Quality Issues**:
+1. **Poor OCR Results** → Try image preprocessing → Manual review
+2. **Incomplete Extraction** → Combine multiple methods
+3. **Formatting Loss** → Preserve structure in summary file
+4. **Large Files** → Process in chunks → Combine results
+
+### **Automation and Batch Processing**
+
+#### **Batch Processing Workflow**:
+1. **Scan Folders**: Regularly check for new uploads
+2. **Process Queue**: Handle documents in upload order
+3. **Status Tracking**: Maintain processing status log
+4. **Error Reporting**: Generate reports for failed processing
+5. **User Notification**: Inform user of processing completion
+
+#### **Integration with Case Management**:
+1. **Update Case Timeline**: Add document processing events
+2. **Cross-Reference Updates**: Link processed documents to relevant sections
+3. **Exhibit Lists**: Maintain master exhibit lists
+4. **Search Indexing**: Make processed text searchable
+
+This document processing system ensures consistent, high-quality handling of all uploaded materials while maintaining the three-file structure and proper organization throughout the case management system.
+
+## CRITICAL: DOWNLOADABLE DOCUMENT PROCESSING
+
+### **When User Requests "Downloadable File" or "Make [Document] Ready for Download"**
+
+**STRICT REQUIREMENT**: This means process the ACTUAL document content through the established framework. Do NOT create templates, examples, or instructional content.
+
+#### **Required Steps for Document Processing**:
+
+1. **Parse Source Content**: Extract all text, structure, and formatting from the provided document
+2. **Create Active Draft Structure**: Set up standardized folder structure in active_drafts/ with all required subfolders
+3. **Populate Draft Content Files**: Break down parsed content into appropriate numbered markdown files following established structure
+4. **Generate Final Output**: Use existing workflow to produce downloadable document
+
+#### **Specific Workflow for Motion Documents**:
+```bash
+# 1. Create folder structure
+active_drafts/motion_[name]/
+├── draft_content/
+│   ├── 01_caption_and_title.md
+│   ├── 02_introduction.md
+│   ├── 03_statement_of_facts.md
+│   ├── 04_legal_standard.md
+│   ├── 05_argument.md
+│   └── 06_conclusion.md
+├── research/
+├── exhibits/
+├── reference_material/
+├── case_documents/
+└── metadata.yml
+
+# 2. Parse and distribute actual content across files
+# 3. Run generation workflow
+python scripts/format_validator.py active_drafts/motion_[name]/ standard
+# Manual HTML preview creation by AI agent in: active_drafts/motion_[name]/html_preview/
+python scripts/generate_final_document.py active_drafts/motion_[name]/ both
+```
+
+#### **What NOT to Do When User Requests Downloadable Document**:
+- ❌ Create template files with placeholders
+- ❌ Create README or instructional files
+- ❌ Create example content
+- ❌ Explain the system instead of using it
+- ❌ Ask for clarification when content is provided
+
+#### **What TO Do**:
+- ✅ Parse the actual provided document content
+- ✅ Use the established framework strictly
+- ✅ Create proper active draft structure
+- ✅ Generate actual downloadable output (HTML/PDF/Word)
+- ✅ Follow the defined workflow exactly
+
+**FRAMEWORK COMPLIANCE**: The system framework is defined and must be followed strictly. When users provide content and request downloadable documents, process their actual content through the established workflow.
+
+## HTML PREVIEW STANDARDS AND WORKFLOW
+
+### **Manual HTML Preview Process**
+
+**ALWAYS use manual HTML preview generation (AI agent directly editing HTML files):**
+
+1. **Create/Edit Markdown Files** → Update source content in `active_drafts/[draft_type]/draft_content/`
+2. **Manual HTML Generation** → Use `str-replace-editor` tool to create/update HTML files in `active_drafts/[draft_type]/html_preview/`
+3. **Maintain Consistency** → Ensure all changes are reflected across both markdown and HTML versions
+
+### **HTML Preview Folder Structure**
+
+**Each draft type must have its own html_preview folder:**
+
+```
+active_drafts/
+├── motion_lift_stay/
+│   ├── draft_content/
+│   ├── html_preview/          ← Individual HTML preview folder
+│   │   ├── motion-preview.html
+│   │   └── declaration-preview.html
+│   ├── exhibits/
+│   └── metadata.yml
+├── complaint_amended_hmi/
+│   ├── draft_content/
+│   ├── html_preview/          ← Individual HTML preview folder
+│   │   └── complaint-preview.html
+│   └── metadata.yml
+```
+
+### **Creating New Draft Types**
+
+**When users request new draft types, use this standardized language:**
+
+*"To set up a new [document_type] draft, please use this language: 'Set up a new [document_type] draft with the standard folder structure including html_preview folder.'"*
+
+**Standard folder structure for new draft types:**
+```
+active_drafts/[new_draft_type]/
+├── draft_content/
+├── html_preview/              ← Always include this folder
+├── research/
+├── exhibits/
+├── reference_material/
+├── case_documents/
+└── metadata.yml
+```
+
+### **IMPORTANT: HTML PREVIEW FOLDER STRUCTURE CHANGE**
+
+**NEW (Current)**: Individual html_preview folders within each draft type
+```
+active_drafts/[draft_type]/html_preview/[document]-preview.html
+```
+
+**DEPRECATED**: Root-level html_preview folder
+```
+html_preview/draft-preview.html  ← DO NOT USE
+```
+
+### **HTML Preview Page Numbering Standards**
+
+**Use ONLY this method for page numbering in HTML previews:**
+
+```css
+@page {
+    margin: 1in;
+    size: letter;
+    @bottom-right {
+        content: counter(page);
+        font-family: "Times New Roman", serif;
+        font-size: 12pt;
+    }
+}
+```
+
+### **Implementation Requirements**
+
+- ✅ **Always use** `@page` with `@bottom-right` for page numbering
+- ❌ **Never use** `@media print` with `body::after` for page numbering
+- ✅ **Browser compatibility**: Works correctly in Chrome, Edge, Safari, and Firefox
+- ✅ **Print quality**: Produces clean page numbers without artifacts
+
+## HTML PREVIEW FOLDER STRUCTURE
+
+### **Standard Draft Type Folder Structure**
+
+Each draft type in `active_drafts/` must follow this standardized structure:
+
+```
+active_drafts/[draft_type_name]/
+├── draft_content/           # Markdown content files
+├── html_preview/           # HTML preview files (REQUIRED)
+├── research/               # Research materials
+├── exhibits/              # Exhibit files
+├── reference_material/    # Reference documents
+├── case_documents/        # Case-related documents
+└── metadata.yml          # Document metadata
+```
+
+### **HTML Preview Folder Requirements**
+
+- ✅ **Location**: `active_drafts/[draft_type]/html_preview/`
+- ✅ **Purpose**: Contains HTML preview files for the specific draft type
+- ✅ **Naming**: Use descriptive names (e.g., `motion-preview.html`, `complaint-preview.html`)
+- ✅ **Isolation**: Each draft type has its own HTML preview folder
+- ❌ **Never use**: Root-level `html_preview/` folder (deprecated)
+
+### **Creating New Draft Types - User Instructions**
+
+When users request new draft types, provide them with this standardized language:
+
+**"To create a new draft type, I'll set up the standard folder structure with the following components:**
+- **draft_content/**: Organized markdown files for your document sections
+- **html_preview/**: Professional HTML previews ready for download/printing
+- **exhibits/**: Storage for supporting documents and attachments
+- **research/**: Legal research and supporting materials
+- **reference_material/**: Templates and reference documents
+- **case_documents/**: Case-specific files and correspondence
+- **metadata.yml**: Document tracking and generation settings
+
+**This structure ensures professional document organization and enables seamless HTML preview generation for court-ready documents."**
+
+### **AI Agent Implementation Process**
+
+When creating new draft types:
+
+1. **Create folder structure**:
+   ```bash
+   mkdir -p active_drafts/[draft_type_name]/{draft_content,html_preview,research,exhibits,reference_material,case_documents}
+   ```
+
+2. **Create metadata.yml** with proper document type classification
+
+3. **Set up draft_content/** with appropriate markdown files for the document type
+
+4. **Create HTML previews MANUALLY** in the `html_preview/` subfolder using str-replace-editor tool with standard CSS and page numbering
+
+5. **Document the new type** in README.md if it represents a new category
+
+### **MANUAL HTML GENERATION REQUIREMENTS**
+
+**CRITICAL**: All HTML preview generation must be done manually by the AI agent using the str-replace-editor tool.
+
+- ❌ **Never use**: `universal_preview_generator.py` script (deprecated)
+- ✅ **Always use**: Manual HTML creation with str-replace-editor tool
+- ✅ **Location**: `active_drafts/[draft_type]/html_preview/[document]-preview.html`
+- ✅ **Standards**: Use standard CSS with `@page` page numbering method
+- ✅ **Formatting**: Times New Roman, 14pt, double-spaced, 1-inch margins
+- ✅ **Border**: Light grey border for screen viewing (removed when printing)
+
+
 # Legal Document Generation System
 
 ## Overview
@@ -483,9 +1163,8 @@ draft_system/
 │   ├── document_processor.py            # Document processing and OCR system
 │   ├── exhibit_manager.py               # Exhibit management system
 │   └── workflow_manager.py              # User onboarding and workflow management
-├── html_preview/               # Standardized preview output
-│   ├── draft-preview.html      # Single preview file for all documents
-│   └── README.md               # HTML preview instructions
+├── html_preview/               # DEPRECATED - Individual draft types now have their own html_preview folders
+│   └── README.md               # Migration instructions
 ├── final_documents/            # Generated final documents
 │   ├── README.md               # Final documents instructions
 │   └── [timestamped files]     # PDF and Word documents with timestamps
@@ -832,13 +1511,12 @@ python scripts/format_fixer.py active_drafts/complaint_case_name/
 python scripts/format_validator.py active_drafts/complaint_case_name/ standard
 ```
 
-### **Step 2: Generate HTML Preview (Manual Process)**
+### **Step 2: Generate HTML Preview**
+```bash
+# DEPRECATED: Use manual HTML generation instead
+# AI agent creates HTML previews in: active_drafts/[draft_type]/html_preview/
 ```
-AI Agent manually creates HTML preview using str-replace-editor tool
-Location: active_drafts/complaint_case_name/html_preview/complaint-preview.html
-DEPRECATED: universal_preview_generator.py script is no longer used
-```
-**Output**: `active_drafts/[draft_type]/html_preview/[document]-preview.html`
+**New Output**: `active_drafts/[draft_type]/html_preview/[document]-preview.html`
 
 ### **Step 3: Generate Final Documents**
 ```bash
@@ -891,10 +1569,6 @@ source venv/bin/activate
 python scripts/format_validator.py active_drafts/complaint_hilton_timeshare/ standard
 python scripts/format_fixer.py active_drafts/complaint_hilton_timeshare/
 
-# 2. Generate HTML preview
-python scripts/universal_preview_generator.py active_drafts/complaint_hilton_timeshare/
-# → html_preview/draft-preview.html
-
 # 3. Generate final documents
 python scripts/generate_final_document.py active_drafts/complaint_hilton_timeshare/ both
 # → final_documents/complaint_hilton_timeshare_20241215_143022.pdf
@@ -904,9 +1578,12 @@ python scripts/generate_final_document.py active_drafts/complaint_hilton_timesha
 ### **Output Specifications**
 
 #### **HTML Preview**
-- **Location**: `html_preview/draft-preview.html`
-- **Behavior**: Overwritten each generation
+- **Location**: `active_drafts/[draft_type]/html_preview/[document]-preview.html`
+- **Behavior**: Created within individual draft type folders
 - **Purpose**: Review and application integration
+- **Structure**: Each draft type has its own html_preview subfolder
+- **Naming**: Descriptive names (e.g., motion-preview.html, complaint-preview.html)
+- **Deprecated**: Root-level `html_preview/` folder is no longer used
 
 #### **Final Documents**
 - **Location**: `final_documents/`
@@ -920,129 +1597,3 @@ python scripts/generate_final_document.py active_drafts/complaint_hilton_timesha
 - v2.0: Added HTML-based preview and generation system
 - v3.0: Implemented unified markdown formatting standards with validation and auto-fixing
 - v4.0: **CURRENT** - Streamlined HTML-first workflow with browser PDF generation and enhanced Word output
-
-## HTML Preview Standards and Workflow
-
-### **⚠️ IMPORTANT: NEW FOLDER STRUCTURE**
-
-**BREAKING CHANGE**: HTML previews are now organized in individual folders within each draft type.
-
-**OLD (Deprecated)**:
-```
-html_preview/draft-preview.html  ← No longer used
-```
-
-**NEW (Current)**:
-```
-active_drafts/[draft_type]/html_preview/[document]-preview.html
-```
-
-### Manual HTML Preview Process
-
-**CRITICAL**: This system uses **manual HTML preview generation** where the AI agent directly creates and edits HTML files using the str-replace-editor tool.
-
-**❌ DEPRECATED**: `universal_preview_generator.py` script is no longer used
-**✅ REQUIRED**: Manual HTML creation by AI agent
-
-#### **Workflow Steps:**
-1. **Create/Edit Markdown Files** → Update source content in `active_drafts/[draft_type]/draft_content/`
-2. **Manual HTML Generation** → AI agent uses `str-replace-editor` tool to create/update HTML files
-3. **Individual Preview Folders** → Each draft type has its own `html_preview/` folder
-4. **Maintain Consistency** → Ensure changes are reflected in both markdown and HTML versions
-
-#### **Folder Structure:**
-```
-active_drafts/
-├── motion_lift_stay/
-│   ├── draft_content/
-│   ├── html_preview/          ← Individual HTML preview folder
-│   │   ├── motion-preview.html
-│   │   └── declaration-preview.html
-│   ├── exhibits/
-│   └── metadata.yml
-├── complaint_amended_hmi/
-│   ├── draft_content/
-│   ├── html_preview/          ← Individual HTML preview folder
-│   │   └── complaint-preview.html
-│   └── metadata.yml
-```
-
-### Creating New Draft Types
-
-**For users requesting new document types, use this standardized language:**
-
-*"To set up a new [document_type] draft, please use this language: 'Set up a new [document_type] draft with the standard folder structure including html_preview folder.'"*
-
-**Standard folder structure for new draft types:**
-```
-active_drafts/[new_draft_type]/
-├── draft_content/
-├── html_preview/              ← Always include this folder
-├── research/
-├── exhibits/
-├── reference_material/
-├── case_documents/
-└── metadata.yml
-```
-
-### Page Numbering Requirements
-
-All HTML previews must use the standard `@page` CSS method for page numbering:
-
-```css
-@page {
-    margin: 1in;
-    size: letter;
-    @bottom-right {
-        content: counter(page);
-        font-family: "Times New Roman", serif;
-        font-size: 12pt;
-    }
-}
-```
-
-### Browser Compatibility
-- ✅ Chrome/Edge: Full support
-- ✅ Firefox: Full support
-- ✅ Safari: Full support
-- ✅ Print to PDF: Works correctly in all browsers
-
-### Implementation Notes
-- **Manual HTML generation** by AI agent using str-replace-editor tool
-- **Individual html_preview folders** for each draft type
-- **Standard page numbering** using `@page` method
-- **Professional legal formatting** with Times New Roman, 14pt, double-spaced
-- **Light grey borders** for screen viewing (removed when printing)
-
-## Creating New Draft Types
-
-### **Standardized User Language**
-
-When users want to create new legal document types, they should use this language:
-
-*"Please set up a new [document_type] draft with the standard folder structure including html_preview folder for downloadable documents."*
-
-### **What This Creates**
-
-The AI agent will automatically set up:
-
-```
-active_drafts/[new_document_type]/
-├── draft_content/           # Organized markdown content sections
-├── html_preview/           # Professional HTML previews ready for download
-├── research/               # Legal research and supporting materials
-├── exhibits/              # Supporting documents and attachments
-├── reference_material/    # Templates and reference documents
-├── case_documents/        # Case-specific files and correspondence
-└── metadata.yml          # Document metadata and generation settings
-```
-
-### **Benefits for Users**
-
-- ✅ **Professional organization**: All document components properly structured
-- ✅ **Instant HTML previews**: Download-ready documents with proper legal formatting
-- ✅ **Exhibit management**: Organized storage for supporting materials
-- ✅ **Research integration**: Dedicated space for legal research and references
-- ✅ **Metadata tracking**: Automatic document classification and settings
-
-This standardized approach ensures consistent, professional legal document generation across all document types.

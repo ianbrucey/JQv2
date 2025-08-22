@@ -82,6 +82,22 @@ export function useEnterLegalCase() {
   });
 }
 
+export function useDeleteLegalCase() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (caseId: string) => legalCaseAPI.deleteCase(caseId),
+    onSuccess: (data, caseId) => {
+      // Invalidate and refetch cases list
+      queryClient.invalidateQueries({ queryKey: legalCaseKeys.lists() });
+      // Also invalidate workspace query in case the deleted case was current
+      queryClient.invalidateQueries({ queryKey: legalCaseKeys.workspace() });
+      // Remove the case from detail cache
+      queryClient.removeQueries({ queryKey: legalCaseKeys.detail(caseId) });
+    },
+  });
+}
+
 export function useExitWorkspace() {
   const queryClient = useQueryClient();
 
@@ -94,19 +110,7 @@ export function useExitWorkspace() {
   });
 }
 
-export function useDeleteLegalCase() {
-  const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: (caseId: string) => legalCaseAPI.deleteCase(caseId),
-    onSuccess: (_, caseId) => {
-      // Remove from cache and invalidate lists
-      queryClient.removeQueries({ queryKey: legalCaseKeys.detail(caseId) });
-      queryClient.invalidateQueries({ queryKey: legalCaseKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: legalCaseKeys.workspace() });
-    },
-  });
-}
 
 // Documents hooks
 export function useUploadCaseDocuments(caseId: string) {

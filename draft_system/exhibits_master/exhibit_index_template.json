@@ -1,0 +1,31 @@
+{
+  "last_updated": "2024-01-01T00:00:00",
+  "exhibits": {
+    "exhibit_a": {
+      "letter": "A",
+      "description": "Sample Contract Document",
+      "original_filename": "sample_contract.pdf",
+      "created_date": "2024-01-01T00:00:00",
+      "location": "/path/to/exhibits_master",
+      "files": {
+        "original": "exhibit_a_sample_contract_original.pdf",
+        "text": "exhibit_a_sample_contract_text.txt",
+        "summary": "exhibit_a_sample_contract_summary.md"
+      },
+      "status": "template_example"
+    }
+  },
+  "next_letter": "B",
+  "metadata": {
+    "case_name": "[Case Name]",
+    "created_by": "exhibit_manager.py",
+    "version": "1.0",
+    "description": "Master exhibit index for case management"
+  },
+  "usage_instructions": {
+    "adding_exhibits": "Use exhibit_manager.py create command",
+    "three_file_system": "Each exhibit has original, text, and summary files",
+    "naming_convention": "exhibit_[letter]_[description]_[type].[ext]",
+    "status_values": ["created", "processed", "reviewed", "filed", "admitted"]
+  }
+}

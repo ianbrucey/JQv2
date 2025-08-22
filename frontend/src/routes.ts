@@ -20,8 +20,10 @@ export default [
       route("api-keys", "routes/api-keys.tsx"),
     ]),
     route("conversations/:conversationId", "routes/conversation.tsx", [
-      // Terminal is the only tab; make it the default index route
+      // Terminal is the default index route
       index("routes/terminal-tab.tsx"),
+      // Documents tab route
+      route("documents", "routes/documents-tab.tsx"),
     ]),
     route("microagent-management", "routes/microagent-management.tsx"),
   ]),

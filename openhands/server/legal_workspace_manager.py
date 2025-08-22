@@ -102,7 +102,7 @@ class LegalWorkspaceManager:
             'case_id': case_id,
             'case_title': case.title,
             'workspace_path': case_workspace_path,
-            'draft_system_initialized': case.draft_system_initialized,
+            'draft_agent_initialized': case.draft_system_initialized,
             'workspace_mounted': True
         }
     

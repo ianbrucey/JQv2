@@ -2,8 +2,9 @@ import React, { lazy, Suspense } from "react";
 import { useLocation } from "react-router";
 import { LoadingSpinner } from "../shared/loading-spinner";
 
-// Lazy load only the Terminal tab (others temporarily removed)
+// Lazy load tabs
 const TerminalTab = lazy(() => import("#/routes/terminal-tab"));
+const DocumentsTab = lazy(() => import("#/routes/documents-tab"));
 
 interface TabContentProps {
   conversationPath: string;
@@ -13,10 +14,12 @@ export function TabContent({ conversationPath }: TabContentProps) {
   const location = useLocation();
   const currentPath = location.pathname;
 
-  // Only Terminal tab remains; default to it when at base path
+  // Determine which tab is active
   const isTerminalActive =
     currentPath === `${conversationPath}/terminal` ||
     currentPath === conversationPath;
+  const isDocumentsActive = currentPath === `${conversationPath}/documents`;
+
   return (
     <div className="h-full w-full relative">
       {/* Each tab content is always loaded but only visible when active */}
@@ -31,6 +34,11 @@ export function TabContent({ conversationPath }: TabContentProps) {
           className={`absolute inset-0 ${isTerminalActive ? "block" : "hidden"}`}
         >
           <TerminalTab />
+        </div>
+        <div
+          className={`absolute inset-0 ${isDocumentsActive ? "block" : "hidden"}`}
+        >
+          <DocumentsTab />
         </div>
       </Suspense>
     </div>
