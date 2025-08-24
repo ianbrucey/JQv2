@@ -325,3 +325,53 @@ async def create_draft(case_id: str, req: CreateDraftRequest) -> DraftResponse:
     except Exception as e:
         logger.error(f"Failed to create draft for case {case_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to create draft: {str(e)}")
+
+
+@router.delete("/cases/{case_id}/drafts/{draft_id}")
+async def delete_draft(case_id: str, draft_id: str):
+    """
+    Delete a draft and all its contents from the filesystem.
+
+    Args:
+        case_id: The legal case ID
+        draft_id: The draft ID to delete
+
+    Returns:
+        Success message
+
+    Raises:
+        HTTPException: If draft not found or deletion fails
+    """
+    try:
+        # Get the case workspace path
+        _, case_root, case_workspace = await _get_case_paths(case_id)
+
+        # Find the draft folder
+        active_drafts_dir = Path(case_workspace) / "active_drafts"
+
+        if not active_drafts_dir.exists():
+            raise HTTPException(status_code=404, detail="No drafts found for this case")
+
+        # Look for the draft folder (it should start with the draft_id)
+        draft_folder = None
+        for folder in active_drafts_dir.iterdir():
+            if folder.is_dir() and folder.name.startswith(draft_id):
+                draft_folder = folder
+                break
+
+        if not draft_folder:
+            raise HTTPException(status_code=404, detail="Draft not found")
+
+        # Delete the entire draft folder and all its contents
+        import shutil
+        shutil.rmtree(draft_folder)
+
+        logger.info(f"Successfully deleted draft {draft_id} for case {case_id}")
+
+        return {"message": f"Draft {draft_id} deleted successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete draft {draft_id} for case {case_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete draft: {str(e)}")

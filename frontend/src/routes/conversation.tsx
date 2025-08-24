@@ -73,7 +73,9 @@ function AppContent() {
       try {
         if (!conversationId) return;
         // Fetch conversation metadata (includes case_id if legal)
-        const metaRes = await fetch(`/api/conversations/${conversationId}/metadata`);
+        const metaRes = await fetch(
+          `/api/conversations/${conversationId}/metadata`,
+        );
         if (!metaRes.ok) return;
         const meta = await metaRes.json();
         const caseId = meta?.case_id;
@@ -81,10 +83,10 @@ function AppContent() {
         if (caseId) {
           // Enter the legal case workspace for this conversation session
           await fetch(`/api/legal/cases/${caseId}/enter`, {
-            method: 'POST',
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
-              'X-Session-ID': conversationId,
+              "Content-Type": "application/json",
+              "X-Session-ID": conversationId,
             },
           });
           // Clear terminal so PWD reflects the new workspace immediately
@@ -92,17 +94,17 @@ function AppContent() {
         } else {
           // Exit any prior legal workspace for this session
           await fetch(`/api/legal/workspace/exit`, {
-            method: 'POST',
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
-              'X-Session-ID': conversationId,
+              "Content-Type": "application/json",
+              "X-Session-ID": conversationId,
             },
           });
           dispatch(clearTerminal());
         }
       } catch (e) {
         // Non-fatal; keep UI responsive
-        console.debug('Workspace sync skipped:', e);
+        console.debug("Workspace sync skipped:", e);
       }
     };
 

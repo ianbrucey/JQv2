@@ -32,21 +32,21 @@ export interface SystemStatus {
 
 class LegalCaseAPI {
   // Base URLs
-  private apiBaseUrl = '/api';          // for conversation/document endpoints
-  private legalBaseUrl = '/api/legal';   // for legal cases endpoints
+  private apiBaseUrl = "/api"; // for conversation/document endpoints
+  private legalBaseUrl = "/api/legal"; // for legal cases endpoints
 
   async createCase(data: CreateCaseRequest): Promise<LegalCase> {
     const response = await fetch(`${this.legalBaseUrl}/cases`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(data),
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || 'Failed to create case');
+      throw new Error(error.detail || "Failed to create case");
     }
 
     return response.json();
@@ -57,20 +57,18 @@ class LegalCaseAPI {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || 'Failed to list cases');
+      throw new Error(error.detail || "Failed to list cases");
     }
 
     return response.json();
   }
-
-
 
   async getCase(caseId: string): Promise<LegalCase> {
     const response = await fetch(`${this.legalBaseUrl}/cases/${caseId}`);
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || 'Failed to get case');
+      throw new Error(error.detail || "Failed to get case");
     }
 
     return response.json();
@@ -84,12 +82,12 @@ class LegalCaseAPI {
     workspace_mounted: boolean;
   }> {
     const response = await fetch(`${this.legalBaseUrl}/cases/${caseId}/enter`, {
-      method: 'POST',
+      method: "POST",
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || 'Failed to enter case');
+      throw new Error(error.detail || "Failed to enter case");
     }
 
     return response.json();
@@ -101,12 +99,12 @@ class LegalCaseAPI {
     message: string;
   }> {
     const response = await fetch(`${this.legalBaseUrl}/workspace/exit`, {
-      method: 'POST',
+      method: "POST",
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || 'Failed to exit workspace');
+      throw new Error(error.detail || "Failed to exit workspace");
     }
 
     return response.json();
@@ -127,7 +125,7 @@ class LegalCaseAPI {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || 'Failed to get workspace info');
+      throw new Error(error.detail || "Failed to get workspace info");
     }
 
     return response.json();
@@ -138,7 +136,7 @@ class LegalCaseAPI {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || 'Failed to get system status');
+      throw new Error(error.detail || "Failed to get system status");
     }
 
     return response.json();
@@ -146,12 +144,12 @@ class LegalCaseAPI {
 
   async deleteCase(caseId: string): Promise<{ message: string }> {
     const response = await fetch(`${this.legalBaseUrl}/cases/${caseId}`, {
-      method: 'DELETE',
+      method: "DELETE",
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || 'Failed to delete case');
+      throw new Error(error.detail || "Failed to delete case");
     }
 
     return response.json();
@@ -160,66 +158,94 @@ class LegalCaseAPI {
   async uploadDocuments(
     conversationId: string,
     files: File[],
-    options: { targetFolder: LegalFolder; tags?: string[]; note?: string }
+    options: { targetFolder: LegalFolder; tags?: string[]; note?: string },
   ): Promise<UploadDocumentsResponse> {
     const form = new FormData();
-    files.forEach((f) => form.append('files', f));
-    form.append('target_folder', options.targetFolder);
-    if (options.tags && options.tags.length) form.append('tags', JSON.stringify(options.tags));
-    if (options.note) form.append('note', options.note);
+    files.forEach((f) => form.append("files", f));
+    form.append("target_folder", options.targetFolder);
+    if (options.tags && options.tags.length)
+      form.append("tags", JSON.stringify(options.tags));
+    if (options.note) form.append("note", options.note);
 
-    const response = await fetch(`${this.apiBaseUrl}/conversations/${conversationId}/documents/upload`, {
-      method: 'POST',
-      body: form,
-    });
+    const response = await fetch(
+      `${this.apiBaseUrl}/conversations/${conversationId}/documents/upload`,
+      {
+        method: "POST",
+        body: form,
+      },
+    );
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || 'Failed to upload documents');
+      throw new Error(error.detail || "Failed to upload documents");
     }
 
     return response.json();
   }
 
   async listDocuments(conversationId: string): Promise<DocumentMeta[]> {
-    const response = await fetch(`${this.apiBaseUrl}/conversations/${conversationId}/documents`);
+    // First get the case ID from conversation metadata
+    const metaResponse = await fetch(
+      `${this.apiBaseUrl}/conversations/${conversationId}/metadata`,
+    );
+    if (!metaResponse.ok) {
+      throw new Error("Failed to get conversation metadata");
+    }
+    const metadata = await metaResponse.json();
+    const caseId = metadata.case_id;
+
+    if (!caseId) {
+      throw new Error("No case ID found in conversation metadata");
+    }
+
+    // Now get documents using the case-based endpoint
+    const response = await fetch(
+      `${this.apiBaseUrl}/legal/cases/${caseId}/documents`,
+    );
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || 'Failed to list documents');
+      throw new Error(error.detail || "Failed to list documents");
     }
 
     const result: ListDocumentsResponse = await response.json();
     return result.items;
   }
 
-  async listFiles(conversationId: string, path?: string): Promise<FileListResponse> {
-    const url = new URL(`${window.location.origin}${this.apiBaseUrl}/conversations/${conversationId}/files/browse`);
+  async listFiles(
+    conversationId: string,
+    path?: string,
+  ): Promise<FileListResponse> {
+    const url = new URL(
+      `${window.location.origin}${this.apiBaseUrl}/conversations/${conversationId}/files/browse`,
+    );
     if (path) {
-      url.searchParams.set('path', path);
+      url.searchParams.set("path", path);
     }
 
     const response = await fetch(url.toString());
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || 'Failed to list files');
+      throw new Error(error.detail || "Failed to list files");
     }
 
     return response.json();
   }
 
   async deleteFile(conversationId: string, path: string): Promise<void> {
-    const url = new URL(`${window.location.origin}${this.apiBaseUrl}/conversations/${conversationId}/files`);
-    url.searchParams.set('path', path);
+    const url = new URL(
+      `${window.location.origin}${this.apiBaseUrl}/conversations/${conversationId}/files`,
+    );
+    url.searchParams.set("path", path);
 
     const response = await fetch(url.toString(), {
-      method: 'DELETE',
+      method: "DELETE",
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || 'Failed to delete file');
+      throw new Error(error.detail || "Failed to delete file");
     }
   }
 }
@@ -227,7 +253,7 @@ class LegalCaseAPI {
 // -------------------------------
 // Documents API (Option A backend)
 // -------------------------------
-export type LegalFolder = 'inbox' | 'exhibits' | 'research' | 'active_drafts';
+export type LegalFolder = "inbox" | "exhibits" | "research" | "active_drafts";
 
 export interface DocumentMeta {
   id: string;
@@ -242,7 +268,7 @@ export interface DocumentMeta {
   tags: string[];
   note?: string | null;
   uploaded_at: string;
-  source: 'ui' | string;
+  source: "ui" | string;
 }
 
 export interface UploadDocumentsResponse {
@@ -259,7 +285,7 @@ export interface ListDocumentsResponse {
 export interface FileItem {
   name: string;
   path: string;
-  type: 'file' | 'directory';
+  type: "file" | "directory";
   size?: number;
   modified: number;
   extension?: string;
@@ -270,8 +296,6 @@ export interface FileListResponse {
   path: string;
   total: number;
 }
-
-
 
 // Export the API instance
 // Export the API instance

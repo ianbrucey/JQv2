@@ -27,31 +27,31 @@ export function useWorkspaceSync(options: WorkspaceSyncOptions = {}) {
   // Extract session/case information from current route
   const getCurrentSessionInfo = useCallback(() => {
     const path = location.pathname;
-    
+
     // Check if we're in a legal case route
     const legalCaseMatch = path.match(/\/legal\/cases\/([^\/]+)/);
     if (legalCaseMatch) {
       return {
-        type: 'legal_case',
+        type: "legal_case",
         caseId: legalCaseMatch[1],
-        sessionId: `legal_case_${legalCaseMatch[1]}`
+        sessionId: `legal_case_${legalCaseMatch[1]}`,
       };
     }
-    
+
     // Check if we're in legal home
-    if (path.includes('/legal')) {
+    if (path.includes("/legal")) {
       return {
-        type: 'legal_home',
+        type: "legal_home",
         caseId: null,
-        sessionId: 'legal_home'
+        sessionId: "legal_home",
       };
     }
-    
+
     // Regular repository mode
     return {
-      type: 'repository',
+      type: "repository",
       caseId: null,
-      sessionId: 'repository'
+      sessionId: "repository",
     };
   }, [location.pathname]);
 
@@ -60,98 +60,113 @@ export function useWorkspaceSync(options: WorkspaceSyncOptions = {}) {
     if (onTerminalReset) {
       onTerminalReset();
     }
-    
+
     // Clear terminal content by sending a clear command
     // This ensures the terminal shows the correct workspace context
-    const terminalElement = document.querySelector('.xterm-screen');
+    const terminalElement = document.querySelector(".xterm-screen");
     if (terminalElement) {
       // Trigger a terminal refresh event
-      const event = new CustomEvent('terminal-workspace-change', {
-        detail: { action: 'reset' }
+      const event = new CustomEvent("terminal-workspace-change", {
+        detail: { action: "reset" },
       });
       window.dispatchEvent(event);
     }
   }, [onTerminalReset]);
 
   // Sync workspace state with backend
-  const syncWorkspaceState = useCallback(async (sessionInfo: ReturnType<typeof getCurrentSessionInfo>) => {
-    try {
-      if (sessionInfo.type === 'legal_case' && sessionInfo.caseId) {
-        // Enter legal case workspace
-        const response = await fetch(`/api/legal/cases/${sessionInfo.caseId}/enter`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Session-ID': sessionInfo.sessionId
-          }
-        });
-        
-        if (response.ok) {
-          const workspaceData = await response.json();
-          
-          if (onWorkspaceChange) {
-            onWorkspaceChange({
-              sessionId: sessionInfo.sessionId,
-              currentCaseId: sessionInfo.caseId,
-              isInCaseWorkspace: true,
-              workspaceBase: workspaceData.workspace_path
-            });
-          }
-          
-          // Reset terminal to show new workspace
-          resetTerminalState();
-          
-          console.log(`🏛️ Entered legal case workspace: ${sessionInfo.caseId}`);
-        }
-      } else if (sessionInfo.type === 'repository') {
-        // Exit legal workspace if we were in one
-        try {
-          const response = await fetch('/api/legal/workspace/exit', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Session-ID': sessionInfo.sessionId
-            }
-          });
-          
+  const syncWorkspaceState = useCallback(
+    async (sessionInfo: ReturnType<typeof getCurrentSessionInfo>) => {
+      try {
+        if (sessionInfo.type === "legal_case" && sessionInfo.caseId) {
+          // Enter legal case workspace
+          const response = await fetch(
+            `/api/legal/cases/${sessionInfo.caseId}/enter`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Session-ID": sessionInfo.sessionId,
+              },
+            },
+          );
+
           if (response.ok) {
+            const workspaceData = await response.json();
+
             if (onWorkspaceChange) {
               onWorkspaceChange({
                 sessionId: sessionInfo.sessionId,
-                currentCaseId: null,
-                isInCaseWorkspace: false,
-                workspaceBase: null
+                currentCaseId: sessionInfo.caseId,
+                isInCaseWorkspace: true,
+                workspaceBase: workspaceData.workspace_path,
               });
             }
-            
-            // Reset terminal to show repository workspace
+
+            // Reset terminal to show new workspace
             resetTerminalState();
-            
-            console.log('📁 Exited legal workspace, returned to repository mode');
+
+            console.log(
+              `🏛️ Entered legal case workspace: ${sessionInfo.caseId}`,
+            );
           }
-        } catch (error) {
-          // Ignore errors when exiting - might not have been in legal workspace
-          console.debug('No legal workspace to exit from');
+        } else if (sessionInfo.type === "repository") {
+          // Exit legal workspace if we were in one
+          try {
+            const response = await fetch("/api/legal/workspace/exit", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Session-ID": sessionInfo.sessionId,
+              },
+            });
+
+            if (response.ok) {
+              if (onWorkspaceChange) {
+                onWorkspaceChange({
+                  sessionId: sessionInfo.sessionId,
+                  currentCaseId: null,
+                  isInCaseWorkspace: false,
+                  workspaceBase: null,
+                });
+              }
+
+              // Reset terminal to show repository workspace
+              resetTerminalState();
+
+              console.log(
+                "📁 Exited legal workspace, returned to repository mode",
+              );
+            }
+          } catch (error) {
+            // Ignore errors when exiting - might not have been in legal workspace
+            console.debug("No legal workspace to exit from");
+          }
         }
+      } catch (error) {
+        console.error("Workspace sync error:", error);
       }
-    } catch (error) {
-      console.error('Workspace sync error:', error);
-    }
-  }, [onWorkspaceChange, resetTerminalState]);
+    },
+    [onWorkspaceChange, resetTerminalState],
+  );
 
   // Effect to handle route changes
   useEffect(() => {
     if (!enableAutoSync) return;
-    
+
     const sessionInfo = getCurrentSessionInfo();
-    
+
     // Add a small delay to ensure the route has fully changed
     const timeoutId = setTimeout(() => {
       syncWorkspaceState(sessionInfo);
     }, 100);
-    
+
     return () => clearTimeout(timeoutId);
-  }, [location.pathname, enableAutoSync, getCurrentSessionInfo, syncWorkspaceState]);
+  }, [
+    location.pathname,
+    enableAutoSync,
+    getCurrentSessionInfo,
+    syncWorkspaceState,
+  ]);
 
   // Manual sync function for explicit workspace changes
   const manualSync = useCallback(() => {
@@ -162,21 +177,21 @@ export function useWorkspaceSync(options: WorkspaceSyncOptions = {}) {
   // Get current workspace status
   const getCurrentWorkspaceStatus = useCallback(async () => {
     const sessionInfo = getCurrentSessionInfo();
-    
+
     try {
-      const response = await fetch('/api/legal/workspace/current', {
+      const response = await fetch("/api/legal/workspace/current", {
         headers: {
-          'X-Session-ID': sessionInfo.sessionId
-        }
+          "X-Session-ID": sessionInfo.sessionId,
+        },
       });
-      
+
       if (response.ok) {
         return await response.json();
       }
     } catch (error) {
-      console.error('Failed to get workspace status:', error);
+      console.error("Failed to get workspace status:", error);
     }
-    
+
     return null;
   }, [getCurrentSessionInfo]);
 
@@ -184,7 +199,7 @@ export function useWorkspaceSync(options: WorkspaceSyncOptions = {}) {
     manualSync,
     getCurrentWorkspaceStatus,
     resetTerminalState,
-    currentSessionInfo: getCurrentSessionInfo()
+    currentSessionInfo: getCurrentSessionInfo(),
   };
 }
 
@@ -194,22 +209,24 @@ export function useWorkspaceSync(options: WorkspaceSyncOptions = {}) {
 export function setupTerminalWorkspaceListener() {
   const handleWorkspaceChange = (event: CustomEvent) => {
     const { action } = event.detail;
-    
-    if (action === 'reset') {
+
+    if (action === "reset") {
       // Send clear command to terminal
-      const terminalInput = document.querySelector('.xterm-helper-textarea') as HTMLTextAreaElement;
+      const terminalInput = document.querySelector(
+        ".xterm-helper-textarea",
+      ) as HTMLTextAreaElement;
       if (terminalInput) {
         // Simulate typing 'clear' command
-        const clearEvent = new KeyboardEvent('keydown', {
-          key: 'Enter',
-          code: 'Enter',
-          keyCode: 13
+        const clearEvent = new KeyboardEvent("keydown", {
+          key: "Enter",
+          code: "Enter",
+          keyCode: 13,
         });
-        
+
         // First send 'clear' text
-        terminalInput.value = 'clear';
-        terminalInput.dispatchEvent(new Event('input', { bubbles: true }));
-        
+        terminalInput.value = "clear";
+        terminalInput.dispatchEvent(new Event("input", { bubbles: true }));
+
         // Then send Enter
         setTimeout(() => {
           terminalInput.dispatchEvent(clearEvent);
@@ -218,9 +235,15 @@ export function setupTerminalWorkspaceListener() {
     }
   };
 
-  window.addEventListener('terminal-workspace-change', handleWorkspaceChange as EventListener);
-  
+  window.addEventListener(
+    "terminal-workspace-change",
+    handleWorkspaceChange as EventListener,
+  );
+
   return () => {
-    window.removeEventListener('terminal-workspace-change', handleWorkspaceChange as EventListener);
+    window.removeEventListener(
+      "terminal-workspace-change",
+      handleWorkspaceChange as EventListener,
+    );
   };
 }

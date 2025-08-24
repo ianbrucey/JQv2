@@ -160,7 +160,7 @@ export const handlers = [
   ...GIT_REPOSITORY_HANDLERS,
   ...openHandsHandlers,
   // --- Legal Cases API ---
-  http.get('/api/legal/system/status', () =>
+  http.get("/api/legal/system/status", () =>
     HttpResponse.json({
       system_initialized: true,
       workspace_manager_ready: true,
@@ -169,37 +169,48 @@ export const handlers = [
       current_case_id: CURRENT_CASE_ID,
     }),
   ),
-  http.get('/api/legal/workspace/current', () => {
-    const current = CURRENT_CASE_ID ? LEGAL_CASES.get(CURRENT_CASE_ID) : undefined;
+  http.get("/api/legal/workspace/current", () => {
+    const current = CURRENT_CASE_ID
+      ? LEGAL_CASES.get(CURRENT_CASE_ID)
+      : undefined;
     return HttpResponse.json({
-      session_id: 'mock-session',
+      session_id: "mock-session",
       current_case_id: CURRENT_CASE_ID,
       is_in_case_workspace: !!CURRENT_CASE_ID,
-      workspace_base: '/tmp/legal_workspace/mock',
+      workspace_base: "/tmp/legal_workspace/mock",
       current_case: current
-        ? { case_id: current.case_id, title: current.title, case_number: current.case_number, status: current.status }
+        ? {
+            case_id: current.case_id,
+            title: current.title,
+            case_number: current.case_number,
+            status: current.status,
+          }
         : undefined,
     });
   }),
-  http.post('/api/legal/workspace/exit', () => {
+  http.post("/api/legal/workspace/exit", () => {
     const prev = CURRENT_CASE_ID;
     CURRENT_CASE_ID = null;
-    return HttpResponse.json({ previous_case_id: prev, workspace_restored: true, message: 'Exited' });
+    return HttpResponse.json({
+      previous_case_id: prev,
+      workspace_restored: true,
+      message: "Exited",
+    });
   }),
-  http.get('/api/legal/cases', () =>
+  http.get("/api/legal/cases", () =>
     HttpResponse.json(Array.from(LEGAL_CASES.values())),
   ),
-  http.post('/api/legal/cases', async ({ request }) => {
+  http.post("/api/legal/cases", async ({ request }) => {
     const body = await request.json();
     const now = new Date().toISOString();
     const id = Math.random().toString(36).slice(2);
     const requestBody = body as Record<string, any>;
     const item: MockLegalCase = {
       case_id: id,
-      title: requestBody?.title || 'Untitled Case',
+      title: requestBody?.title || "Untitled Case",
       case_number: requestBody?.case_number,
       description: requestBody?.description,
-      status: 'active',
+      status: "active",
       created_at: now,
       updated_at: now,
       draft_system_initialized: true,
@@ -207,9 +218,9 @@ export const handlers = [
     LEGAL_CASES.set(id, item);
     return HttpResponse.json(item, { status: 201 });
   }),
-  http.post('/api/legal/cases/:caseId/enter', ({ params }) => {
+  http.post("/api/legal/cases/:caseId/enter", ({ params }) => {
     const { caseId } = params;
-    if (typeof caseId === 'string' && LEGAL_CASES.has(caseId)) {
+    if (typeof caseId === "string" && LEGAL_CASES.has(caseId)) {
       CURRENT_CASE_ID = caseId;
       const c = LEGAL_CASES.get(caseId)!;
       return HttpResponse.json({
@@ -220,16 +231,16 @@ export const handlers = [
         workspace_mounted: true,
       });
     }
-    return HttpResponse.json({ detail: 'Case not found' }, { status: 404 });
+    return HttpResponse.json({ detail: "Case not found" }, { status: 404 });
   }),
-  http.delete('/api/legal/cases/:caseId', ({ params }) => {
+  http.delete("/api/legal/cases/:caseId", ({ params }) => {
     const { caseId } = params;
-    if (typeof caseId === 'string' && LEGAL_CASES.has(caseId)) {
+    if (typeof caseId === "string" && LEGAL_CASES.has(caseId)) {
       LEGAL_CASES.delete(caseId);
       if (CURRENT_CASE_ID === caseId) CURRENT_CASE_ID = null;
-      return HttpResponse.json({ message: 'Case deleted successfully' });
+      return HttpResponse.json({ message: "Case deleted successfully" });
     }
-    return HttpResponse.json({ detail: 'Case not found' }, { status: 404 });
+    return HttpResponse.json({ detail: "Case not found" }, { status: 404 });
   }),
   // --- Existing handlers ---
   http.get("/api/user/info", () => {
