@@ -110,31 +110,30 @@ async def create_new_conversation(
 
         logger.info(f'Saving metadata for conversation {conversation_id}')
 
-        # Check if this is a legal case conversation
-        legal_workspace_manager = None
-        try:
-            from openhands.server.legal_workspace_manager import get_legal_workspace_manager
-            legal_workspace_manager = get_legal_workspace_manager()
-        except ImportError:
-            pass
-
-        # Extract case information if in legal workspace
+        # Extract case information from conversation instructions
         case_id = None
         case_title = None
         case_number = None
         case_status = None
 
-        if legal_workspace_manager and legal_workspace_manager.is_in_case_workspace():
-            case_id = legal_workspace_manager.current_case_id
-            # Try to get case details
-            try:
-                if legal_workspace_manager.case_store:
-                    case = await legal_workspace_manager.case_store.get_case(case_id)
-                    case_title = case.title
-                    case_number = case.case_number
-                    case_status = case.status
-            except Exception as e:
-                logger.debug(f"Could not retrieve case details: {e}")
+        if conversation_instructions:
+            import re
+            # Extract case information from conversation instructions
+            case_id_match = re.search(r'Case ID:\s*([a-zA-Z0-9_-]+)', conversation_instructions)
+            case_title_match = re.search(r'Case Title:\s*([^\n\r]+)', conversation_instructions)
+            case_number_match = re.search(r'Case Number:\s*([^\n\r]+)', conversation_instructions)
+            case_status_match = re.search(r'Case Status:\s*([^\n\r]+)', conversation_instructions)
+
+            if case_id_match:
+                case_id = case_id_match.group(1).strip()
+            if case_title_match:
+                case_title = case_title_match.group(1).strip()
+            if case_number_match:
+                case_number = case_number_match.group(1).strip()
+            if case_status_match:
+                case_status = case_status_match.group(1).strip()
+
+            logger.info(f"Extracted case info from conversation instructions: case_id={case_id}, case_title={case_title}, case_number={case_number}, case_status={case_status}")
 
         await conversation_store.save_metadata(
             ConversationMetadata(

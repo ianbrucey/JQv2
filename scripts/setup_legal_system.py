@@ -104,7 +104,7 @@ async def verify_draft_system_integration():
         test_case = cases[0]
         workspace_path = Path(test_case.workspace_path)
         
-        # Check if draft_agent files exist
+        # Check if draft_system files exist
         required_files = [
             'README.md',
             'standards',

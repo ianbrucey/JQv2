@@ -8,7 +8,7 @@ JQv2 is a specialized legal document management system that extends OpenHands (f
 
 ### Key Features
 
-- **⚡ Instant Startup**: LocalRuntime optimization eliminates Docker startup delays
+- **⚡ Instant Startup**: LocalRuntime optimization for immediate agent availability
 - **🏛️ Legal Case Management**: Complete case lifecycle management with workspace isolation
 - **📄 Document Templates**: Integrated draft system with legal document templates
 - **🤖 AI-Powered Assistance**: OpenHands AI agents for legal document creation and analysis
@@ -40,7 +40,7 @@ JQv2 is a specialized legal document management system that extends OpenHands (f
 ├─────────────────────────────────────────────────────────────┤
 │  Runtime Layer                                             │
 │  ├── LocalRuntime (Legal Cases) ⚡                         │
-│  ├── DockerRuntime (Development)                           │
+│  ├── Alternative Runtimes (if needed)                      │
 │  └── Runtime Detection Logic                               │
 ├─────────────────────────────────────────────────────────────┤
 │  Storage Layer                                             │
@@ -54,18 +54,18 @@ JQv2 is a specialized legal document management system that extends OpenHands (f
 
 ### Runtime Selection Strategy
 
-The system automatically selects the optimal runtime based on context:
+The system is optimized for local development and legal case workflows:
 
 - **Legal Cases**: LocalRuntime (< 5 second startup)
-- **Development**: DockerRuntime (full isolation)
+- **Local Development**: Direct local execution for immediate feedback
 - **Detection**: Automatic based on workspace path, session ID, and context
 
-### Startup Time Comparison
+### Performance Characteristics
 
-| Runtime Type | Startup Time | Use Case | Isolation |
-|--------------|--------------|----------|-----------|
-| LocalRuntime | < 5 seconds  | Legal workflows | Process-level |
-| DockerRuntime | 60-120+ seconds | Development | Container-level |
+| Runtime Type  | Startup Time    | Use Case        | Isolation       |
+| ------------- | --------------- | --------------- | --------------- |
+| LocalRuntime  | < 5 seconds     | Legal workflows | Process-level   |
+| Local Dev     | Instant         | Development     | Process-level   |
 
 ## 📁 Project Structure
 
@@ -98,6 +98,7 @@ OpenHands/
 ## 🛠️ Technology Stack
 
 ### Backend
+
 - **Python 3.13+**: Core language
 - **FastAPI**: Web framework
 - **OpenHands**: AI agent framework (modified)
@@ -105,6 +106,7 @@ OpenHands/
 - **AsyncIO**: Asynchronous operations
 
 ### Frontend
+
 - **React 18**: UI framework
 - **TypeScript**: Type safety
 - **TanStack Query**: Data fetching
@@ -112,6 +114,7 @@ OpenHands/
 - **Vite**: Build tool
 
 ### Runtime & Infrastructure
+
 - **LocalRuntime**: Optimized for legal workflows
 - **tmux**: Terminal session management
 - **File-based Storage**: Legal case persistence
@@ -120,21 +123,27 @@ OpenHands/
 ## 🔧 Key Components
 
 ### Legal Workspace Manager
+
 Manages case workspaces and runtime configuration:
+
 - Case workspace creation and isolation
 - Runtime selection and optimization
 - Template system integration
 - Workspace lifecycle management
 
 ### Runtime Optimization Layer
+
 Intelligent runtime selection for optimal performance:
+
 - Automatic detection of legal vs development contexts
 - LocalRuntime configuration for instant startup
-- Fallback to DockerRuntime when needed
+- Optimized for local development workflows
 - Performance monitoring and logging
 
 ### Legal Case Store
+
 File-based storage system for legal cases:
+
 - Case metadata management
 - Document template integration
 - Workspace path management
@@ -143,12 +152,14 @@ File-based storage system for legal cases:
 ## 📊 Performance Metrics
 
 ### Achieved Improvements
+
 - **Startup Time**: 95%+ reduction (120s → 5s)
 - **User Experience**: Instant agent availability
 - **Resource Usage**: 70% reduction in memory/CPU
-- **Deployment Complexity**: Simplified (no Docker required for legal workflows)
+- **Deployment Complexity**: Simplified local development setup
 
 ### Real-World Impact
+
 - **Daily Time Saved**: 14.5 minutes for typical usage (10 sessions/day)
 - **Weekly Time Saved**: 72.5 minutes (over 1 hour)
 - **User Satisfaction**: Professional-grade responsiveness
@@ -156,18 +167,21 @@ File-based storage system for legal cases:
 ## 🎯 Use Cases
 
 ### Legal Professionals
+
 - Contract review and analysis
 - Legal document drafting
 - Case research and preparation
 - Document template management
 
 ### Law Firms
+
 - Multi-case workspace management
 - Team collaboration on legal documents
 - Standardized document templates
 - Audit trails and version control
 
 ### Legal Departments
+
 - Corporate legal document management
 - Compliance documentation
 - Legal workflow automation
@@ -185,20 +199,27 @@ File-based storage system for legal cases:
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - Python 3.13+
 - Node.js 18+
 - tmux (for LocalRuntime)
 
-### Installation
+### Local Development Setup
+
 ```bash
 # Clone the repository
-git clone https://github.com/ianbrucey/JQv2.git
-cd JQv2
+git clone https://github.com/your-username/openhands-jq-research.git
+cd openhands-jq-research
 
 # Set up Python environment
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+cd OpenHands
 pip install -e .
+pip install -r draft_system/requirements.txt
+pip install psycopg2-binary redis python-dotenv
 
 # Set up frontend
 cd frontend
@@ -207,15 +228,16 @@ npm run build
 cd ..
 
 # Configure environment
-export LEGAL_WORKSPACE_ROOT=/tmp/legal_workspace
-export DRAFT_SYSTEM_PATH=/tmp/draft_system
-mkdir -p $LEGAL_WORKSPACE_ROOT $DRAFT_SYSTEM_PATH
+cp .env.legal ../.env.local
+# Edit .env.local with your local database/Redis settings
 
 # Start the server
-python -m uvicorn openhands.server.listen:app --host 127.0.0.1 --port 3000
+export $(cat ../.env.local | xargs)
+poetry run uvicorn openhands.server.listen:app --host 127.0.0.1 --port 3000
 ```
 
 ### Access the System
+
 - **Main Application**: http://localhost:3000
 - **Legal Cases**: Navigate to "Legal Cases" in the UI
 - **API Documentation**: http://localhost:3000/docs
@@ -230,10 +252,10 @@ python -m uvicorn openhands.server.listen:app --host 127.0.0.1 --port 3000
 
 ## 📚 Documentation
 
+- [Local Development Setup](../confluence/07_local_development_setup.md) - Complete setup guide
 - [Architecture Guide](./docs/ARCHITECTURE.md)
 - [Legal System Documentation](./docs/LEGAL_SYSTEM.md)
 - [Runtime Optimization](./docs/RUNTIME_OPTIMIZATION.md)
-- [Deployment Guide](./docs/DEPLOYMENT.md)
 
 ## 🤝 Contributing
 

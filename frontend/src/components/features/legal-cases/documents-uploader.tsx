@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { useCurrentWorkspace, useListCaseDocuments, useUploadCaseDocuments } from '#/hooks/mutation/use-legal-cases';
+import { useListCaseDocuments, useUploadCaseDocuments } from '#/hooks/mutation/use-legal-cases';
 
 const FOLDERS = [
   { value: 'inbox', label: 'Inbox' },
@@ -11,18 +11,20 @@ const FOLDERS = [
 type FolderValue = typeof FOLDERS[number]['value'];
 
 interface DocumentsUploaderProps {
-  caseId: string;
+  caseId: string; // used in API path
 }
 
 export function DocumentsUploader({ caseId }: DocumentsUploaderProps) {
-  const { data: workspace } = useCurrentWorkspace();
   const [folder, setFolder] = useState<FolderValue>('inbox');
   const [files, setFiles] = useState<File[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const { mutateAsync: uploadDocs, isPending } = useUploadCaseDocuments(caseId);
+
+  // Fetch list without gating (route handles workspace enter)
   const { data: listData, refetch } = useListCaseDocuments(caseId, folder);
+
 
   const onFilesSelected = useCallback((selected: FileList | null) => {
     if (!selected) return;
@@ -61,19 +63,18 @@ export function DocumentsUploader({ caseId }: DocumentsUploaderProps) {
       setFiles([]);
       await refetch();
     } catch (e) {
-      setErrors((prev) => [...prev, (e as Error).message]);
+      setErrors((prev) => [...prev, (e as Error).message || 'Upload failed']);
     }
   }, [files, folder, uploadDocs, refetch]);
 
   const removeFile = (idx: number) => setFiles((prev) => prev.filter((_, i) => i !== idx));
-
-  const isInCase = workspace?.current_case_id === caseId;
 
   return (
     <section className="bg-base-primary border border-gray-700 rounded-lg p-4">
       <div className="flex items-center gap-3 mb-3">
         <label className="text-sm text-gray-300">Target Folder</label>
         <select
+          aria-label="target-folder"
           value={folder}
           onChange={(e) => setFolder(e.target.value as FolderValue)}
           className="bg-gray-800 text-gray-100 px-2 py-1 rounded border border-gray-600 text-sm"
@@ -82,22 +83,18 @@ export function DocumentsUploader({ caseId }: DocumentsUploaderProps) {
             <option key={f.value} value={f.value}>{f.label}</option>
           ))}
         </select>
-        {!isInCase && (
-          <span className="text-xs text-yellow-400">Enter this case to enable uploads</span>
-        )}
       </div>
 
       <div
         onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
         onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-lg p-6 text-center ${isInCase ? 'border-gray-600' : 'border-gray-700 opacity-60'}`}
+        className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center"
       >
         <p className="text-gray-300 mb-2">Drag and drop files here</p>
         <p className="text-gray-500 text-sm mb-3">PDF, Images (PNG/JPG/TIFF), DOCX, TXT, MD • Max 100MB each</p>
         <button
-          className="px-3 py-1 bg-gray-700 text-gray-100 rounded text-sm"
+          className="px-3 py-1 bg-gray-700 text-gray-100 rounded text-sm hover:bg-gray-600"
           onClick={() => inputRef.current?.click()}
-          disabled={!isInCase}
         >
           Select files
         </button>
@@ -107,7 +104,6 @@ export function DocumentsUploader({ caseId }: DocumentsUploaderProps) {
           multiple
           className="hidden"
           onChange={(e) => onFilesSelected(e.target.files)}
-          disabled={!isInCase}
         />
       </div>
 
@@ -126,7 +122,7 @@ export function DocumentsUploader({ caseId }: DocumentsUploaderProps) {
             <button
               className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-60"
               onClick={handleUpload}
-              disabled={!isInCase || isPending}
+              disabled={isPending}
             >
               {isPending ? 'Uploading…' : 'Upload'}
             </button>

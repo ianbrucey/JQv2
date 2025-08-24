@@ -1,0 +1,241 @@
+import asyncio
+import os
+import shutil
+from pathlib import Path
+from typing import Annotated, Any, Dict, List, Literal
+
+from fastapi import (APIRouter, Depends, File, HTTPException, Query, UploadFile,
+                     status)
+from pydantic import BaseModel, Field
+
+from openhands.server.user_auth import get_user_id
+from openhands.server.legal_case_workspace import LegalCaseWorkspace
+from openhands.server.utils import get_conversation_store
+from openhands.storage.conversation.conversation_store import ConversationStore
+
+router = APIRouter(prefix="/api")
+
+# In-memory cache for file structures
+file_structure_cache = {}
+CACHE_EXPIRATION = 300  # 5 minutes
+
+# =====================================================================================================================
+
+
+class FileNode(BaseModel):
+    name: str
+    path: str
+    type: Literal['file', 'directory']
+    size: int | None = None
+    last_modified: str | None = None
+    children: List['FileNode'] | None = None
+
+
+class UploadResult(BaseModel):
+    filename: str
+    path: str
+    size: int
+    content_type: str | None
+
+
+class Document(BaseModel):
+    filename: str
+    path: str
+    size: int
+    last_modified: str
+
+# =====================================================================================================================
+
+
+async def get_case_workspace(conversation_id: str,
+                             session: Session = Depends(session_manager.get_session)) -> LegalCaseWorkspace:
+    """Dependency to get the legal case workspace for the given conversation."""
+    conv = await get_conversation_from_db(conversation_id, session.user_id)
+    case_id = conv.metadata.get("case_id")
+    if not case_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail="No case associated with this conversation.")
+
+    # Use the legal workspace manager to get the workspace path
+    from openhands.server.legal_workspace_manager import get_legal_workspace_manager
+    workspace_manager = get_legal_workspace_manager()
+
+    if not workspace_manager or not workspace_manager.case_store:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail="Legal workspace manager not available.")
+
+    # Get the cases directory (parent of case directories)
+    # LegalCaseWorkspace expects the base_dir to be the parent that contains case-{id} directories
+    cases_dir = str(workspace_manager.case_store.cases_dir)
+
+    return LegalCaseWorkspace(case_id, cases_dir)
+
+
+async def get_validated_path(workspace: LegalCaseWorkspace = Depends(get_case_workspace),
+                           relative_path: str | None = None) -> Path:
+    """Dependency to get a validated, safe path within the case workspace."""
+    if not relative_path:
+        return workspace.get_workspace_path()
+
+    if not is_safe_path(workspace.get_workspace_path(), relative_path):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail="Invalid or unsafe path provided.")
+
+    return workspace.get_workspace_path(relative_path)
+
+
+@router.get("/conversations/{conversation_id}/files/browse",
+            response_model=List[FileNode],
+            tags=["documents"],
+            summary="Browse files and directories in the case workspace.")
+async def browse_files(conversation_id: str, path: str | None = Query(None), workspace: LegalCaseWorkspace = Depends(get_case_workspace)):
+    """Browses a specific directory, returning a list of its contents."""
+    validated_path = await get_validated_path(workspace, path)
+    if not validated_path.is_dir():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Path is not a directory.")
+
+    items = []
+    for item in sorted(validated_path.iterdir(), key=lambda x: (x.is_file(), x.name)):
+        items.append(
+            FileNode(name=item.name, path=str(item.relative_to(workspace.get_workspace_path())), type='directory' if item.is_dir()
+                     else 'file', size=item.stat().st_size if item.is_file() else None,
+                     last_modified=str(item.stat().st_mtime)))
+    return items
+
+
+@router.post("/conversations/{conversation_id}/documents/upload",
+             response_model=List[UploadResult],
+             tags=["documents"],
+             summary="Upload one or more documents to the case intake folder.")
+async def upload_document(conversation_id: str, files: List[UploadFile] = File(...),
+                          workspace: LegalCaseWorkspace = Depends(get_case_workspace)):
+    """Uploads files to the `intake` directory of the case workspace."""
+    upload_dir = workspace.get_intake_path()
+    if not upload_dir.exists():
+        upload_dir.mkdir(parents=True, exist_ok=True)
+
+    results = []
+    for file in files:
+        safe_filename = file.filename.replace("..", "")  # Basic sanitization
+        dest_path = upload_dir / safe_filename
+
+        if dest_path.exists():
+            # Simple resolution: append a counter to the filename
+            counter = 1
+            stem, ext = dest_path.stem, dest_path.suffix
+            while dest_path.exists():
+                dest_path = upload_dir / f"{stem}_{counter}{ext}"
+                counter += 1
+
+        try:
+            with open(dest_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+
+            results.append(
+                UploadResult(filename=dest_path.name, path=str(dest_path.relative_to(workspace.get_workspace_path())),
+                             size=dest_path.stat().st_size, content_type=file.content_type))
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                detail=f"Failed to save file: {safe_filename}. Error: {e}")
+
+    # Invalidate cache on upload
+    file_structure_cache.pop(workspace.case_id, None)
+
+    return results
+
+
+@router.get("/conversations/{conversation_id}/documents",
+            response_model=List[Document],
+            tags=["documents"],
+            summary="List all documents in the case workspace.")
+async def list_documents(conversation_id: str, workspace: LegalCaseWorkspace = Depends(get_case_workspace)):
+    """Provides a flat list of all files in the case workspace."""
+    all_files = []
+    for dirpath, _, filenames in os.walk(workspace.get_workspace_path()):
+        for filename in filenames:
+            filepath = Path(dirpath) / filename
+            all_files.append(
+                Document(filename=filename, path=str(filepath.relative_to(workspace.get_workspace_path())),
+                         size=filepath.stat().st_size, last_modified=str(filepath.stat().st_mtime)))
+    return all_files
+
+
+@router.get("/conversations/{conversation_id}/documents/structure",
+            response_model=FileNode,
+            tags=["documents"],
+            summary="Get the directory structure of the case workspace.")
+async def get_document_structure(conversation_id: str, workspace: LegalCaseWorkspace = Depends(get_case_workspace)):
+    """Returns a hierarchical structure of the case workspace, using a cache for performance."""
+    cache_key = workspace.case_id
+    cached_item = file_structure_cache.get(cache_key)
+
+    if cached_item and (asyncio.get_event_loop().time() - cached_item['time']) < CACHE_EXPIRATION:
+        return cached_item['structure']
+
+    def get_dir_structure(path: Path) -> FileNode:
+        """Recursively builds the directory structure."""
+        children = []
+        for item in sorted(path.iterdir(), key=lambda x: (x.is_file(), x.name)):
+            if item.is_dir():
+                children.append(get_dir_structure(item))
+            else:
+                children.append(
+                    FileNode(name=item.name, path=str(item.relative_to(workspace.get_workspace_path())), type='file',
+                             size=item.stat().st_size, last_modified=str(item.stat().st_mtime)))
+        return FileNode(name=path.name, path=str(path.relative_to(workspace.get_workspace_path().parent)), type='directory',
+                        children=children)
+
+    structure = get_dir_structure(workspace.get_workspace_path())
+    file_structure_cache[cache_key] = {'structure': structure, 'time': asyncio.get_event_loop().time()}
+
+    return structure
+
+
+@router.delete("/conversations/{conversation_id}/files",
+             status_code=status.HTTP_204_NO_CONTENT,
+             tags=["documents"],
+             summary="Delete a file or directory in the case workspace.")
+async def delete_file_or_directory(
+    conversation_id: str,
+    path_to_delete: str = Query(..., alias="path", description="The relative path to the file or directory to delete."),
+    workspace: LegalCaseWorkspace = Depends(get_case_workspace)
+):
+    """
+    Deletes a file or a directory at the specified path within the case workspace.
+    - If the path points to a file, the file is deleted.
+    - If the path points to a directory, the directory and all its contents are deleted recursively.
+    - The path must be a safe, relative path within the case workspace.
+    """
+    
+    # Use get_validated_path to ensure the path is safe and within the workspace
+    validated_path = await get_validated_path(workspace, path_to_delete)
+
+    if not validated_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File or directory not found."
+        )
+
+    try:
+        if validated_path.is_dir():
+            shutil.rmtree(validated_path)
+        elif validated_path.is_file():
+            validated_path.unlink()
+        else:
+            # This case should be rare (e.g., broken symlinks)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The specified path is neither a file nor a directory."
+            )
+        
+        # Invalidate cache on delete
+        file_structure_cache.pop(workspace.case_id, None)
+
+    except OSError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete path: {e}"
+        )
+    
+    return
+

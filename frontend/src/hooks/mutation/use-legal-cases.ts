@@ -21,6 +21,8 @@ export function useLegalCases() {
     queryKey: legalCaseKeys.lists(),
     queryFn: () => legalCaseAPI.listCases(),
     staleTime: 30000, // 30 seconds
+    meta: { disableToast: true }, // Disable error toasts for this query
+    retry: false, // Don't retry on failure
   });
 }
 
@@ -38,6 +40,8 @@ export function useCurrentWorkspace() {
     queryFn: () => legalCaseAPI.getCurrentWorkspace(),
     staleTime: 10000, // 10 seconds
     refetchInterval: 30000, // Refetch every 30 seconds
+    meta: { disableToast: true }, // Disable error toasts for this query
+    retry: false, // Don't retry on failure
   });
 }
 
@@ -47,6 +51,7 @@ export function useLegalSystemStatus() {
     queryFn: () => legalCaseAPI.getSystemStatus(),
     staleTime: 60000, // 1 minute
     retry: 1, // Only retry once if system isn't ready
+    meta: { disableToast: true }, // Disable error toasts for this query
   });
 }
 
@@ -79,6 +84,8 @@ export function useEnterLegalCase() {
       queryClient.invalidateQueries({ queryKey: legalCaseKeys.detail(caseId) });
       queryClient.invalidateQueries({ queryKey: legalCaseKeys.lists() });
     },
+    meta: { disableToast: true },
+    retry: false,
   });
 }
 
@@ -113,11 +120,11 @@ export function useExitWorkspace() {
 
 
 // Documents hooks
-export function useUploadCaseDocuments(caseId: string) {
+export function useUploadCaseDocuments(conversationId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (params: { files: File[]; targetFolder: 'inbox' | 'exhibits' | 'research' | 'active_drafts'; tags?: string[]; note?: string }) =>
-      legalCaseAPI.uploadDocuments(caseId, params.files, { targetFolder: params.targetFolder, tags: params.tags, note: params.note }),
+      legalCaseAPI.uploadDocuments(conversationId, params.files, { targetFolder: params.targetFolder, tags: params.tags, note: params.note }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: legalCaseKeys.workspace() });
       // Invalidate a future documents list key if we add a dedicated key later
@@ -126,15 +133,34 @@ export function useUploadCaseDocuments(caseId: string) {
 }
 
 export function useListCaseDocuments(
-  caseId: string,
+  conversationId: string,
   folder?: 'inbox' | 'exhibits' | 'research' | 'active_drafts',
-  options?: { enabled?: boolean }
+  options?: { enabled?: boolean },
 ) {
   return useQuery({
-    queryKey: ['legal-cases', 'documents', caseId, folder ?? 'all'],
-    queryFn: () => legalCaseAPI.listDocuments(caseId),
-    enabled: (options?.enabled ?? true) && !!caseId,
+    queryKey: ['legal-cases', 'documents', conversationId, folder ?? 'all'],
+    queryFn: () => legalCaseAPI.listDocuments(conversationId),
+    enabled: (options?.enabled ?? true) && !!conversationId,
     staleTime: 10000,
+  });
+}
+
+export function useListCaseFiles(conversationId: string, path?: string) {
+  return useQuery({
+    queryKey: ['legal-cases', 'files', conversationId, path ?? ''],
+    queryFn: () => legalCaseAPI.listFiles(conversationId, path),
+    enabled: !!conversationId,
+    staleTime: 10000,
+  });
+}
+
+export function useDeleteCaseFile(conversationId: string, path?: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (filePath: string) => legalCaseAPI.deleteFile(conversationId, filePath),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['legal-cases', 'files', conversationId, path ?? ''] });
+    },
   });
 }
 

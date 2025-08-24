@@ -9,7 +9,8 @@ from pydantic import BaseModel
 
 from openhands.server.dependencies import get_dependencies
 from openhands.server.legal_workspace_manager import get_legal_workspace_manager, initialize_legal_workspace_manager
-from openhands.server.shared import config
+from openhands.server.shared import config, ConversationStoreImpl
+from openhands.runtime import get_runtime_cls
 from openhands.storage.legal_case_store import FileLegalCaseStore
 from openhands.storage.data_models.legal_case import CaseStatus
 
@@ -210,13 +211,57 @@ async def update_case(
 @router.delete("/cases/{case_id}")
 async def delete_case(
     case_id: str,
+    request: Request,
     case_store: FileLegalCaseStore = Depends(get_case_store)
 ) -> Dict[str, str]:
-    """Delete a legal case."""
+    """Delete a legal case and all associated conversations and workspace data."""
     try:
         if not await case_store.case_exists(case_id):
             raise HTTPException(status_code=404, detail="Case not found")
 
+        # 1) Delete any conversations linked to this case via metadata.case_id
+        try:
+            from openhands.server.utils import get_conversation_store
+            conversation_store = await get_conversation_store(request)
+            # Paginate through all conversations to find matches
+            page_id = None
+            to_delete: list[str] = []
+            while True:
+                result_set = await conversation_store.search(page_id=page_id, limit=100)
+                for meta in result_set.results:
+                    if getattr(meta, 'case_id', None) == case_id:
+                        to_delete.append(meta.conversation_id)
+                if not result_set.next_page_id:
+                    break
+                page_id = result_set.next_page_id
+
+            # Delete each conversation safely via runtime cleanup + metadata removal
+            runtime_cls = get_runtime_cls(config.runtime)
+            for convo_id in to_delete:
+                try:
+                    is_running = False
+                    from openhands.server.shared import conversation_manager
+                    is_running = await conversation_manager.is_agent_loop_running(convo_id)
+                    if is_running:
+                        await conversation_manager.close_session(convo_id)
+                    await runtime_cls.delete(convo_id)
+                    await conversation_store.delete_metadata(convo_id)
+                except Exception as de:
+                    logger.warning(f"Failed to delete conversation {convo_id} for case {case_id}: {de}")
+        except Exception as e:
+            logger.warning(f"Conversation cleanup error for case {case_id}: {e}")
+
+        # 2) If this request's session is currently in this case, exit it to avoid stale state
+        try:
+            session_id = request.headers.get('X-Session-ID')
+            if session_id:
+                manager = get_legal_workspace_manager(session_id)
+                if manager and manager.get_current_case_id() == case_id:
+                    await manager.exit_case_workspace()
+        except Exception as e:
+            logger.debug(f"Workspace exit after deletion failed (session scoped): {e}")
+
+        # 3) Delete the case workspace directory and metadata
         await case_store.delete_case(case_id)
 
         logger.info(f"Deleted legal case: {case_id}")
@@ -231,34 +276,20 @@ async def delete_case(
 
 
 @router.post("/cases/{case_id}/enter")
-async def enter_case(
-    case_id: str,
-    request: Request
-) -> Dict[str, Any]:
-    """Enter a legal case workspace with proper session isolation."""
+async def enter_case(case_id: str) -> Dict[str, Any]:
+    """Enter a legal case workspace."""
     try:
-        # Extract session ID from request headers or generate one
-        session_id = request.headers.get('X-Session-ID', 'default')
-
-        # Get the session-specific workspace manager
-        workspace_manager = get_legal_workspace_manager(session_id)
+        # Get the singleton workspace manager
+        workspace_manager = get_legal_workspace_manager()
         if not workspace_manager:
-            # Initialize a session-specific manager on-demand
-            workspace_manager = initialize_legal_workspace_manager(config, session_id, user_id=None)
-
-        # Initialize workspace manager if needed
-        if not workspace_manager.case_store:
-            await workspace_manager.initialize()
+            workspace_manager = initialize_legal_workspace_manager(config)
 
         # Enter the case workspace
         result = await workspace_manager.enter_case_workspace(case_id)
 
-        logger.info(f"Entered legal case workspace: {case_id} for session: {session_id}")
+        logger.info(f"Entered legal case workspace: {case_id}")
 
-        # Add session information to the result
-        result['session_id'] = session_id
         result['workspace_transition'] = True
-
         return result
 
     except ValueError as e:
@@ -269,25 +300,19 @@ async def enter_case(
 
 
 @router.post("/workspace/exit")
-async def exit_case_workspace(request: Request) -> Dict[str, Any]:
-    """Exit the current case workspace with proper session isolation."""
+async def exit_case_workspace() -> Dict[str, Any]:
+    """Exit the current case workspace."""
     try:
-        # Extract session ID from request headers
-        session_id = request.headers.get('X-Session-ID', 'default')
-
-        # Get the session-specific workspace manager
-        workspace_manager = get_legal_workspace_manager(session_id)
+        # Get the singleton workspace manager
+        workspace_manager = get_legal_workspace_manager()
         if not workspace_manager:
-            raise HTTPException(status_code=500, detail="Workspace manager not initialized for this session")
+            raise HTTPException(status_code=500, detail="Workspace manager not initialized")
 
         result = await workspace_manager.exit_case_workspace()
 
-        logger.info(f"Exited case workspace for session: {session_id}")
+        logger.info("Exited case workspace")
 
-        # Add session information to the result
-        result['session_id'] = session_id
         result['workspace_transition'] = True
-
         return result
 
     except Exception as e:
@@ -296,19 +321,15 @@ async def exit_case_workspace(request: Request) -> Dict[str, Any]:
 
 
 @router.get("/workspace/current")
-async def get_current_workspace(request: Request) -> Dict[str, Any]:
-    """Get current workspace information with session isolation."""
+async def get_current_workspace() -> Dict[str, Any]:
+    """Get current workspace information."""
     try:
-        # Extract session ID from request headers
-        session_id = request.headers.get('X-Session-ID', 'default')
-
-        # Get the session-specific workspace manager
-        workspace_manager = get_legal_workspace_manager(session_id)
+        # Get the singleton workspace manager
+        workspace_manager = get_legal_workspace_manager()
         if not workspace_manager:
             return {
-                "session_id": session_id,
                 "is_in_case_workspace": False,
-                "message": f"Workspace manager not initialized for session: {session_id}"
+                "message": "Workspace manager not initialized"
             }
 
         workspace_info = workspace_manager.get_workspace_info()
@@ -324,7 +345,6 @@ async def get_current_workspace(request: Request) -> Dict[str, Any]:
                 }
             })
 
-        workspace_info['session_id'] = session_id
         return workspace_info
 
     except Exception as e:
@@ -484,28 +504,24 @@ def _find_duplicate(manifest: dict, checksum: str) -> Optional[dict]:
 @router.post("/cases/{case_id}/documents")
 async def upload_case_documents(
     case_id: str,
-    request: Request,
     files: List[UploadFile] = File(...),
     target_folder: str = Form('inbox'),
     tags: Optional[str] = Form(None),
     note: Optional[str] = Form(None),
 ):
     try:
-        session_id = request.headers.get('X-Session-ID')
-        if not session_id:
-            raise HTTPException(status_code=401, detail="Missing X-Session-ID header")
-
-        workspace_manager = get_legal_workspace_manager(session_id)
+        # Get the singleton workspace manager
+        workspace_manager = get_legal_workspace_manager()
         if not workspace_manager:
-            # Initialize a session-specific manager on-demand
-            workspace_manager = initialize_legal_workspace_manager(config, session_id, user_id=None)
+            workspace_manager = initialize_legal_workspace_manager(config)
 
         if not workspace_manager.case_store:
             await workspace_manager.initialize()
 
-        # Enforce session is in the target case
-        if workspace_manager.get_current_case_id() != case_id:
-            raise HTTPException(status_code=403, detail="Session is not in the target case workspace. Enter the case first.")
+        # Simple case existence check
+        case = await workspace_manager.case_store.get_case(case_id)
+        if not case:
+            raise HTTPException(status_code=404, detail="Case not found")
 
         # Resolve paths
         case_store = workspace_manager.case_store
@@ -624,23 +640,21 @@ async def upload_case_documents(
 @router.get("/cases/{case_id}/documents")
 async def list_case_documents(
     case_id: str,
-    request: Request,
     folder: Optional[str] = None,
 ):
     try:
-        session_id = request.headers.get('X-Session-ID')
-        if not session_id:
-            raise HTTPException(status_code=401, detail="Missing X-Session-ID header")
-
-        workspace_manager = get_legal_workspace_manager(session_id)
+        # Get the singleton workspace manager
+        workspace_manager = get_legal_workspace_manager()
         if not workspace_manager:
-            raise HTTPException(status_code=500, detail="Workspace manager not initialized for this session")
+            workspace_manager = initialize_legal_workspace_manager(config)
 
         if not workspace_manager.case_store:
             await workspace_manager.initialize()
 
-        if workspace_manager.get_current_case_id() != case_id:
-            raise HTTPException(status_code=403, detail="Session is not in the target case workspace. Enter the case first.")
+        # Simple case existence check
+        case = await workspace_manager.case_store.get_case(case_id)
+        if not case:
+            raise HTTPException(status_code=404, detail="Case not found")
 
         case_store = workspace_manager.case_store
         case_root = Path(case_store.get_case_root_path(case_id))
@@ -659,3 +673,95 @@ async def list_case_documents(
     except Exception as e:
         logger.error(f"Failed to list documents for case {case_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to list documents: {str(e)}")
+
+
+@router.get("/cases/{case_id}/files")
+async def list_case_files(
+    case_id: str,
+    path: Optional[str] = None,
+):
+    """List files and directories in the case workspace."""
+    try:
+        # Get the singleton workspace manager
+        workspace_manager = get_legal_workspace_manager()
+        if not workspace_manager:
+            workspace_manager = initialize_legal_workspace_manager(config)
+
+        if not workspace_manager.case_store:
+            await workspace_manager.initialize()
+
+        # Simple case existence check
+        case = await workspace_manager.case_store.get_case(case_id)
+        if not case:
+            raise HTTPException(status_code=404, detail="Case not found")
+
+        case_store = workspace_manager.case_store
+        case_root = Path(case_store.get_case_root_path(case_id))
+
+        # Determine the target path
+        if path:
+            # Sanitize path to prevent directory traversal
+            clean_path = path.strip('/').replace('..', '')
+            target_path = case_root / clean_path
+        else:
+            target_path = case_root
+
+        # Ensure the target path is within the case root
+        try:
+            target_path = target_path.resolve()
+            case_root = case_root.resolve()
+            if not str(target_path).startswith(str(case_root)):
+                raise HTTPException(status_code=403, detail="Access denied")
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid path")
+
+        if not target_path.exists():
+            return {'items': [], 'path': path or '', 'total': 0}
+
+        items = []
+        if target_path.is_dir():
+            try:
+                for item in sorted(target_path.iterdir()):
+                    # Skip hidden files and system files
+                    if item.name.startswith('.'):
+                        continue
+
+                    relative_path = item.relative_to(case_root)
+                    item_info = {
+                        'name': item.name,
+                        'path': str(relative_path),
+                        'type': 'directory' if item.is_dir() else 'file',
+                        'size': item.stat().st_size if item.is_file() else None,
+                        'modified': item.stat().st_mtime,
+                    }
+
+                    # Add file extension for files
+                    if item.is_file():
+                        item_info['extension'] = item.suffix.lower()
+
+                    items.append(item_info)
+            except PermissionError:
+                raise HTTPException(status_code=403, detail="Permission denied")
+        else:
+            # Single file info
+            relative_path = target_path.relative_to(case_root)
+            items.append({
+                'name': target_path.name,
+                'path': str(relative_path),
+                'type': 'file',
+                'size': target_path.stat().st_size,
+                'modified': target_path.stat().st_mtime,
+                'extension': target_path.suffix.lower(),
+            })
+
+        return {
+            'items': items,
+            'path': path or '',
+            'total': len(items)
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to list files for case {case_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to list files: {str(e)}")

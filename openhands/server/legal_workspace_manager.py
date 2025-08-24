@@ -1,5 +1,5 @@
 """
-Legal Workspace Manager - handles workspace switching for legal cases
+Legal Workspace Manager - Simplified singleton for single-tenant legal case management
 """
 import os
 import logging
@@ -13,53 +13,49 @@ from openhands.storage.data_models.legal_case import LegalCase
 
 logger = logging.getLogger(__name__)
 
-# Global instance registry - now session-aware
-_legal_workspace_managers: Dict[str, 'LegalWorkspaceManager'] = {}
 
-class LegalWorkspaceManager:
-    """Manages workspace switching for legal cases with session isolation."""
+class SimpleLegalWorkspaceManager:
+    """Simplified singleton workspace manager for single-tenant legal case management."""
 
-    def __init__(self, config: OpenHandsConfig, session_id: str):
+    _instance: Optional['SimpleLegalWorkspaceManager'] = None
+
+    def __init__(self, config: OpenHandsConfig):
         self.config = config
-        self.session_id = session_id
         self.case_store: Optional[FileLegalCaseStore] = None
         self.current_case_id: Optional[str] = None
 
-        # Store original workspace configuration immediately
-        self.original_workspace_config: Dict[str, Any] = {
-            'workspace_base': config.workspace_base,
-            'workspace_mount_path': getattr(config, 'workspace_mount_path', None),
-            'workspace_mount_path_in_sandbox': config.workspace_mount_path_in_sandbox
-        }
-
-        # Store original runtime for restoration
+        # Store original workspace configuration for restoration
+        self.original_workspace_base = config.workspace_base
         self.original_runtime = config.runtime
+
+    @classmethod
+    def get_instance(cls, config: Optional[OpenHandsConfig] = None) -> 'SimpleLegalWorkspaceManager':
+        """Get or create the singleton instance."""
+        if cls._instance is None:
+            if config is None:
+                raise ValueError("Config required for first initialization")
+            cls._instance = cls(config)
+        return cls._instance
+
+    @classmethod
+    def reset_instance(cls):
+        """Reset the singleton instance (useful for testing)."""
+        cls._instance = None
         
     async def initialize(self, user_id: str | None = None):
         """Initialize the workspace manager with case store."""
-        try:
-            self.case_store = await FileLegalCaseStore.get_instance(self.config, user_id)
-
-            # Original workspace configuration is already stored in __init__
-            # Just update it if it wasn't set properly
-            if not self.original_workspace_config.get('workspace_base'):
-                self.original_workspace_config.update({
-                    'workspace_base': self.config.workspace_base,
-                    'workspace_mount_path': getattr(self.config, 'workspace_mount_path', None),
-                    'workspace_mount_path_in_sandbox': self.config.workspace_mount_path_in_sandbox
-                })
-
-            logger.info("Legal workspace manager initialized successfully")
-
-        except Exception as e:
-            logger.error(f"Failed to initialize legal workspace manager: {e}")
-            logger.info("Legal case functionality may be limited")
-            # Don't raise - allow OpenHands to start without legal features
+        if self.case_store is None:
+            try:
+                self.case_store = await FileLegalCaseStore.get_instance(self.config, user_id)
+                logger.info("Legal workspace manager initialized")
+            except Exception as e:
+                logger.error(f"Failed to initialize legal workspace manager: {e}")
+                raise
     
     async def enter_case_workspace(self, case_id: str) -> Dict[str, Any]:
         """Enter a legal case workspace by updating configuration."""
         if not self.case_store:
-            raise RuntimeError("Workspace manager not initialized")
+            await self.initialize()
         
         # Get the case
         case = await self.case_store.get_case(case_id)
@@ -102,7 +98,7 @@ class LegalWorkspaceManager:
             'case_id': case_id,
             'case_title': case.title,
             'workspace_path': case_workspace_path,
-            'draft_agent_initialized': case.draft_system_initialized,
+            'draft_system_initialized': case.draft_system_initialized,
             'workspace_mounted': True
         }
     
@@ -143,17 +139,14 @@ class LegalWorkspaceManager:
         """Exit the current case workspace and restore original configuration."""
         if not self.current_case_id:
             return {'message': 'No active case workspace'}
-        
-        # Restore original configuration
-        self.config.workspace_base = self.original_workspace_config['workspace_base']
 
-        # Restore original runtime
-        if hasattr(self, 'original_runtime'):
-            self.config.runtime = self.original_runtime
+        # Restore original configuration
+        self.config.workspace_base = self.original_workspace_base
+        self.config.runtime = self.original_runtime
 
         # Restore environment variables
-        if self.original_workspace_config['workspace_base']:
-            os.environ['WORKSPACE_BASE'] = self.original_workspace_config['workspace_base']
+        if self.original_workspace_base:
+            os.environ['WORKSPACE_BASE'] = self.original_workspace_base
         elif 'WORKSPACE_BASE' in os.environ:
             del os.environ['WORKSPACE_BASE']
         
@@ -212,47 +205,28 @@ class LegalWorkspaceManager:
     def get_workspace_info(self) -> Dict[str, Any]:
         """Get current workspace information."""
         return {
-            'session_id': self.session_id,
             'current_case_id': self.current_case_id,
             'is_in_case_workspace': self.is_in_case_workspace(),
             'workspace_base': self.config.workspace_base,
             'sandbox_volumes': self.config.sandbox.volumes,
-            'original_workspace_base': self.original_workspace_config.get('workspace_base')
+            'original_workspace_base': self.original_workspace_base
         }
 
 
-def get_legal_workspace_manager(session_id: str | None = None) -> Optional[LegalWorkspaceManager]:
-    """Get the legal workspace manager instance for a specific session."""
-    if session_id is None:
-        # Return any available manager if no session specified (backward compatibility)
-        if _legal_workspace_managers:
-            return next(iter(_legal_workspace_managers.values()))
+# Simplified global functions for backward compatibility
+def get_legal_workspace_manager(session_id: str | None = None) -> Optional[SimpleLegalWorkspaceManager]:
+    """Get the singleton legal workspace manager instance."""
+    try:
+        return SimpleLegalWorkspaceManager.get_instance()
+    except ValueError:
         return None
-    return _legal_workspace_managers.get(session_id)
 
 
-def initialize_legal_workspace_manager(config: OpenHandsConfig, session_id: str, user_id: str | None = None):
-    """Initialize a session-specific legal workspace manager."""
-    # Create a deep copy of config for this session to avoid shared state
-    session_config = config.model_copy(deep=True)
-    manager = LegalWorkspaceManager(session_config, session_id)
-    _legal_workspace_managers[session_id] = manager
-    logger.info(f"Initialized legal workspace manager for session: {session_id}")
-    return manager
+def initialize_legal_workspace_manager(config: OpenHandsConfig, session_id: str = None, user_id: str | None = None) -> SimpleLegalWorkspaceManager:
+    """Initialize the singleton legal workspace manager."""
+    return SimpleLegalWorkspaceManager.get_instance(config)
 
 
-def cleanup_legal_workspace_manager(session_id: str):
-    """Clean up the legal workspace manager for a specific session."""
-    if session_id in _legal_workspace_managers:
-        manager = _legal_workspace_managers[session_id]
-        # Restore original configuration if needed
-        try:
-            if manager.current_case_id:
-                # Exit current case workspace before cleanup
-                import asyncio
-                asyncio.create_task(manager.exit_case_workspace())
-        except Exception as e:
-            logger.warning(f"Error during workspace cleanup for session {session_id}: {e}")
-
-        del _legal_workspace_managers[session_id]
-        logger.info(f"Cleaned up legal workspace manager for session: {session_id}")
+def cleanup_legal_workspace_manager(session_id: str = None):
+    """Clean up function for backward compatibility - no-op for singleton."""
+    pass

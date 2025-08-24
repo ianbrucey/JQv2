@@ -136,6 +136,22 @@ const openHandsHandlers = [
   }),
 ];
 
+// --- Legal Cases Mock State ---
+interface MockLegalCase {
+  case_id: string;
+  title: string;
+  case_number?: string;
+  description?: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  last_accessed_at?: string;
+  draft_system_initialized: boolean;
+  conversation_id?: string;
+}
+const LEGAL_CASES = new Map<string, MockLegalCase>();
+let CURRENT_CASE_ID: string | null = null;
+
 export const handlers = [
   ...STRIPE_BILLING_HANDLERS,
   ...FILE_SERVICE_HANDLERS,
@@ -143,6 +159,78 @@ export const handlers = [
   ...SECRETS_HANDLERS,
   ...GIT_REPOSITORY_HANDLERS,
   ...openHandsHandlers,
+  // --- Legal Cases API ---
+  http.get('/api/legal/system/status', () =>
+    HttpResponse.json({
+      system_initialized: true,
+      workspace_manager_ready: true,
+      database_ready: true,
+      draft_system_available: true,
+      current_case_id: CURRENT_CASE_ID,
+    }),
+  ),
+  http.get('/api/legal/workspace/current', () => {
+    const current = CURRENT_CASE_ID ? LEGAL_CASES.get(CURRENT_CASE_ID) : undefined;
+    return HttpResponse.json({
+      session_id: 'mock-session',
+      current_case_id: CURRENT_CASE_ID,
+      is_in_case_workspace: !!CURRENT_CASE_ID,
+      workspace_base: '/tmp/legal_workspace/mock',
+      current_case: current
+        ? { case_id: current.case_id, title: current.title, case_number: current.case_number, status: current.status }
+        : undefined,
+    });
+  }),
+  http.post('/api/legal/workspace/exit', () => {
+    const prev = CURRENT_CASE_ID;
+    CURRENT_CASE_ID = null;
+    return HttpResponse.json({ previous_case_id: prev, workspace_restored: true, message: 'Exited' });
+  }),
+  http.get('/api/legal/cases', () =>
+    HttpResponse.json(Array.from(LEGAL_CASES.values())),
+  ),
+  http.post('/api/legal/cases', async ({ request }) => {
+    const body = await request.json();
+    const now = new Date().toISOString();
+    const id = Math.random().toString(36).slice(2);
+    const item: MockLegalCase = {
+      case_id: id,
+      title: body?.title || 'Untitled Case',
+      case_number: body?.case_number,
+      description: body?.description,
+      status: 'active',
+      created_at: now,
+      updated_at: now,
+      draft_system_initialized: true,
+    };
+    LEGAL_CASES.set(id, item);
+    return HttpResponse.json(item, { status: 201 });
+  }),
+  http.post('/api/legal/cases/:caseId/enter', ({ params }) => {
+    const { caseId } = params;
+    if (typeof caseId === 'string' && LEGAL_CASES.has(caseId)) {
+      CURRENT_CASE_ID = caseId;
+      const c = LEGAL_CASES.get(caseId)!;
+      return HttpResponse.json({
+        case_id: caseId,
+        case_title: c.title,
+        workspace_path: `/tmp/legal_workspace/cases/case-${caseId}/draft_system`,
+        draft_system_initialized: c.draft_system_initialized,
+        workspace_mounted: true,
+      });
+    }
+    return HttpResponse.json({ detail: 'Case not found' }, { status: 404 });
+  }),
+  http.delete('/api/legal/cases/:caseId', ({ params }) => {
+    const { caseId } = params;
+    if (typeof caseId === 'string' && LEGAL_CASES.has(caseId)) {
+      LEGAL_CASES.delete(caseId);
+      if (CURRENT_CASE_ID === caseId) CURRENT_CASE_ID = null;
+      return HttpResponse.json({ message: 'Case deleted successfully' });
+    }
+    return HttpResponse.json({ detail: 'Case not found' }, { status: 404 });
+  }),
+  // --- Existing handlers ---
   http.get("/api/user/info", () => {
     const user: GitUser = {
       id: "1",

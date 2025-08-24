@@ -33,7 +33,6 @@ from openhands.llm.llm import LLM
 from openhands.runtime.runtime_status import RuntimeStatus
 from openhands.server.constants import ROOM_KEY
 from openhands.server.legal_workspace_manager import (
-    get_legal_workspace_manager,
     initialize_legal_workspace_manager,
     cleanup_legal_workspace_manager
 )
@@ -416,112 +415,6 @@ class Session:
             self._send_status_message(msg_type, runtime_status, message), self.loop
         )
 
-    async def _configure_legal_runtime_if_needed(self, config: OpenHandsConfig) -> OpenHandsConfig:
-        """Configure runtime for legal case workspace if we're in legal mode.
-
-        This method checks if we're currently in a legal case workspace and if so,
-        configures the runtime to use LocalRuntime for instant startup instead of Docker.
-
-        Args:
-            config: The original OpenHands configuration
-
-        Returns:
-            Modified configuration with legal runtime settings if applicable
-        """
-        # Use session-specific legal workspace manager
-        legal_workspace_manager = get_legal_workspace_manager(self.sid)
-
-        # Check multiple indicators for legal case context
-        is_legal_case = False
-        case_id = None
-        case_workspace_path = None
-
-        # Method 1: Check if legal workspace manager indicates we're in a case
-        if legal_workspace_manager and legal_workspace_manager.is_in_case_workspace():
-            is_legal_case = True
-            case_id = legal_workspace_manager.current_case_id
-            case_workspace_path = config.workspace_base
-            self.logger.debug(f"Legal case detected via workspace manager: {case_id}")
-
-        # Method 2: Check if workspace path indicates legal case
-        elif config.workspace_base and "legal_workspace/cases/" in str(config.workspace_base):
-            is_legal_case = True
-            # Extract case ID from path
-            try:
-                path_parts = str(config.workspace_base).split("/")
-                if "cases" in path_parts:
-                    case_idx = path_parts.index("cases")
-                    if case_idx + 1 < len(path_parts):
-                        case_id = path_parts[case_idx + 1]
-                case_workspace_path = config.workspace_base
-                self.logger.debug(f"Legal case detected via workspace path: {case_id}")
-            except Exception as e:
-                self.logger.debug(f"Could not extract case ID from path: {e}")
-
-        # Method 3: Check session ID for legal case pattern
-        elif self.sid and ("legal_" in self.sid or "case_" in self.sid):
-            is_legal_case = True
-            case_id = self.sid
-            case_workspace_path = config.workspace_base
-            self.logger.debug(f"Legal case detected via session ID: {case_id}")
-
-        # If not a legal case, use original config
-        if not is_legal_case:
-            return config
-
-        # Create a copy of the config for legal case modifications
-        legal_config = config.model_copy(deep=True)
-
-        # Configure for LocalRuntime to avoid Docker startup delay
-        legal_config.runtime = "local"
-
-        if case_workspace_path:
-            # Configure workspace for LocalRuntime
-            legal_config.workspace_base = case_workspace_path
-            legal_config.workspace_mount_path = case_workspace_path
-            legal_config.workspace_mount_path_in_sandbox = "/workspace"
-
-            # Configure sandbox volumes for local runtime
-            legal_config.sandbox.volumes = f"{case_workspace_path}:/workspace:rw"
-
-            # Set up environment variables for the runtime
-            if not legal_config.sandbox.runtime_startup_env_vars:
-                legal_config.sandbox.runtime_startup_env_vars = {}
-
-            # Add legal case environment variables that will be available to the agent
-            legal_config.sandbox.runtime_startup_env_vars.update({
-                'OH_CASE_WORKSPACE': case_workspace_path,
-                'LEGAL_CASE_ID': case_id or '',
-                'WORKSPACE_BASE': case_workspace_path,
-                'LEGAL_WORKSPACE_ROOT': os.environ.get('LEGAL_WORKSPACE_ROOT', '/tmp/legal_workspace'),
-                'DRAFT_SYSTEM_PATH': os.environ.get('DRAFT_SYSTEM_PATH', '/tmp/draft_system'),
-            })
-
-            # Create the sentinel file in the workspace
-            try:
-                from pathlib import Path
-                import json
-                sentinel_path = Path(case_workspace_path) / '.case_workspace.json'
-                sentinel_data = {
-                    'case_id': case_id,
-                    'workspace_path': case_workspace_path,
-                    'session_id': self.sid
-                }
-                sentinel_path.write_text(json.dumps(sentinel_data, indent=2))
-                self.logger.debug(f"Created sentinel file: {sentinel_path}")
-            except Exception as e:
-                self.logger.warning(f"Failed to create sentinel file: {e}")
-
-            self.logger.info(
-                f"🏛️ Legal Runtime Configuration Applied:\n"
-                f"  • Runtime: {legal_config.runtime} (bypassing Docker for instant startup)\n"
-                f"  • Case ID: {case_id}\n"
-                f"  • Workspace: {case_workspace_path}\n"
-                f"  • Environment Variables: OH_CASE_WORKSPACE, LEGAL_CASE_ID\n"
-                f"  • Expected startup time: < 5 seconds"
-            )
-
-        return legal_config
 
     async def _configure_legal_runtime_with_case_detection(
         self, config: OpenHandsConfig, conversation_instructions: str | None = None
@@ -551,8 +444,8 @@ class Session:
                 # Step 2: Construct workspace path directly
                 case_workspace_path = f"/tmp/legal_workspace/cases/case-{case_id}/draft_system"
 
-                # Step 3: Set workspace_base directly in config
-                legal_config = config.model_copy(deep=True)
+                # Step 3: Set workspace_base directly in config (no deep copy needed for single-tenant)
+                legal_config = config.model_copy()
                 legal_config.runtime = "local"  # Use LocalRuntime for instant startup
                 legal_config.workspace_base = case_workspace_path
                 legal_config.workspace_mount_path = case_workspace_path
@@ -578,8 +471,7 @@ class Session:
                 sentinel_path = Path(case_workspace_path) / '.case_workspace.json'
                 sentinel_data = {
                     'case_id': case_id,
-                    'workspace_path': case_workspace_path,
-                    'session_id': self.sid
+                    'workspace_path': case_workspace_path
                 }
                 sentinel_path.write_text(json.dumps(sentinel_data, indent=2))
 

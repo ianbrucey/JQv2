@@ -22,7 +22,7 @@ services:
       
       # Legal Workspace Configuration
       - LEGAL_WORKSPACE_ROOT=/app/legal_workspace
-      - DRAFT_SYSTEM_PATH=/app/draft_agent
+      - DRAFT_SYSTEM_PATH=/app/draft_system
       - WORKSPACE_BASE=/app/legal_workspace
       
       # File Storage
@@ -36,11 +36,11 @@ services:
       - AUTO_SAVE_INTERVAL=30
       
       # Sandbox Configuration
-      - SANDBOX_VOLUMES=/app/legal_workspace:/workspace:rw,/app/draft_agent:/app/draft_agent:ro
+      - SANDBOX_VOLUMES=/app/legal_workspace:/workspace:rw,/app/draft_system:/app/draft_system:ro
       
     volumes:
-      # Mount draft_agent as read-only template
-      - ./draft_agent:/app/draft_agent:ro
+      # Mount draft_system as read-only template
+      - ./draft_system:/app/draft_system:ro
       
       # Mount legal workspace for case management
       - ./legal_workspace:/app/legal_workspace
@@ -78,5 +78,5 @@ networks:
 volumes:
   legal_workspace:
     driver: local
-  draft_agent:
+  draft_system:
     driver: local

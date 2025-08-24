@@ -31,10 +31,12 @@ export interface SystemStatus {
 }
 
 class LegalCaseAPI {
-  private baseUrl = '/api/legal';
+  // Base URLs
+  private apiBaseUrl = '/api';          // for conversation/document endpoints
+  private legalBaseUrl = '/api/legal';   // for legal cases endpoints
 
   async createCase(data: CreateCaseRequest): Promise<LegalCase> {
-    const response = await fetch(`${this.baseUrl}/cases`, {
+    const response = await fetch(`${this.legalBaseUrl}/cases`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -51,7 +53,7 @@ class LegalCaseAPI {
   }
 
   async listCases(): Promise<LegalCase[]> {
-    const response = await fetch(`${this.baseUrl}/cases`);
+    const response = await fetch(`${this.legalBaseUrl}/cases`);
 
     if (!response.ok) {
       const error = await response.json();
@@ -64,7 +66,7 @@ class LegalCaseAPI {
 
 
   async getCase(caseId: string): Promise<LegalCase> {
-    const response = await fetch(`${this.baseUrl}/cases/${caseId}`);
+    const response = await fetch(`${this.legalBaseUrl}/cases/${caseId}`);
 
     if (!response.ok) {
       const error = await response.json();
@@ -81,11 +83,8 @@ class LegalCaseAPI {
     draft_system_initialized: boolean;
     workspace_mounted: boolean;
   }> {
-    const response = await fetch(`${this.baseUrl}/cases/${caseId}/enter`, {
+    const response = await fetch(`${this.legalBaseUrl}/cases/${caseId}/enter`, {
       method: 'POST',
-      headers: {
-        'X-Session-ID': `legal_case_${caseId}`,
-      },
     });
 
     if (!response.ok) {
@@ -101,7 +100,7 @@ class LegalCaseAPI {
     workspace_restored: boolean;
     message: string;
   }> {
-    const response = await fetch(`${this.baseUrl}/workspace/exit`, {
+    const response = await fetch(`${this.legalBaseUrl}/workspace/exit`, {
       method: 'POST',
     });
 
@@ -124,7 +123,7 @@ class LegalCaseAPI {
       status: string;
     };
   }> {
-    const response = await fetch(`${this.baseUrl}/workspace/current`);
+    const response = await fetch(`${this.legalBaseUrl}/workspace/current`);
 
     if (!response.ok) {
       const error = await response.json();
@@ -135,7 +134,7 @@ class LegalCaseAPI {
   }
 
   async getSystemStatus(): Promise<SystemStatus> {
-    const response = await fetch(`${this.baseUrl}/system/status`);
+    const response = await fetch(`${this.legalBaseUrl}/system/status`);
 
     if (!response.ok) {
       const error = await response.json();
@@ -146,7 +145,7 @@ class LegalCaseAPI {
   }
 
   async deleteCase(caseId: string): Promise<{ message: string }> {
-    const response = await fetch(`${this.baseUrl}/cases/${caseId}`, {
+    const response = await fetch(`${this.legalBaseUrl}/cases/${caseId}`, {
       method: 'DELETE',
     });
 
@@ -159,9 +158,9 @@ class LegalCaseAPI {
   }
 
   async uploadDocuments(
-    caseId: string,
+    conversationId: string,
     files: File[],
-    options: { targetFolder: LegalFolder; tags?: string[]; note?: string; sessionId?: string }
+    options: { targetFolder: LegalFolder; tags?: string[]; note?: string }
   ): Promise<UploadDocumentsResponse> {
     const form = new FormData();
     files.forEach((f) => form.append('files', f));
@@ -169,11 +168,8 @@ class LegalCaseAPI {
     if (options.tags && options.tags.length) form.append('tags', JSON.stringify(options.tags));
     if (options.note) form.append('note', options.note);
 
-    const response = await fetch(`${this.baseUrl}/cases/${caseId}/documents`, {
+    const response = await fetch(`${this.apiBaseUrl}/conversations/${conversationId}/documents/upload`, {
       method: 'POST',
-      headers: {
-        'X-Session-ID': options.sessionId || getSessionIdForCase(caseId),
-      },
       body: form,
     });
 
@@ -185,12 +181,8 @@ class LegalCaseAPI {
     return response.json();
   }
 
-  async listDocuments(caseId: string, sessionId?: string): Promise<DocumentMeta[]> {
-    const response = await fetch(`${this.baseUrl}/cases/${caseId}/documents`, {
-      headers: {
-        'X-Session-ID': sessionId || getSessionIdForCase(caseId),
-      },
-    });
+  async listDocuments(conversationId: string): Promise<DocumentMeta[]> {
+    const response = await fetch(`${this.apiBaseUrl}/conversations/${conversationId}/documents`);
 
     if (!response.ok) {
       const error = await response.json();
@@ -199,6 +191,36 @@ class LegalCaseAPI {
 
     const result: ListDocumentsResponse = await response.json();
     return result.items;
+  }
+
+  async listFiles(conversationId: string, path?: string): Promise<FileListResponse> {
+    const url = new URL(`${window.location.origin}${this.apiBaseUrl}/conversations/${conversationId}/files/browse`);
+    if (path) {
+      url.searchParams.set('path', path);
+    }
+
+    const response = await fetch(url.toString());
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to list files');
+    }
+
+    return response.json();
+  }
+
+  async deleteFile(conversationId: string, path: string): Promise<void> {
+    const url = new URL(`${window.location.origin}${this.apiBaseUrl}/conversations/${conversationId}/files`);
+    url.searchParams.set('path', path);
+
+    const response = await fetch(url.toString(), {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to delete file');
+    }
   }
 }
 
@@ -234,9 +256,22 @@ export interface ListDocumentsResponse {
   total: number;
 }
 
-function getSessionIdForCase(caseId: string) {
-  return `legal_case_${caseId}`;
+export interface FileItem {
+  name: string;
+  path: string;
+  type: 'file' | 'directory';
+  size?: number;
+  modified: number;
+  extension?: string;
 }
+
+export interface FileListResponse {
+  items: FileItem[];
+  path: string;
+  total: number;
+}
+
+
 
 // Export the API instance
 // Export the API instance

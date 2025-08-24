@@ -1,25 +1,25 @@
 import React from 'react';
-import { useCurrentWorkspace } from '#/hooks/mutation/use-legal-cases';
+import { useConversationId } from '#/hooks/use-conversation-id';
 import { DocumentsUploader } from '#/components/features/legal-cases/documents-uploader';
+import { CaseFileBrowser } from '#/components/features/legal-cases/case-file-browser';
 
 export default function DocumentsTab() {
-  const { data: currentWorkspace } = useCurrentWorkspace();
+  const { conversationId } = useConversationId();
 
-  if (!currentWorkspace?.current_case_id) {
-    return (
-      <div className="h-full w-full flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-gray-400 mb-2">
-            <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
-          <h3 className="text-lg text-gray-300 mb-2">No Case Selected</h3>
-          <p className="text-gray-500">Enter a legal case to upload and manage documents.</p>
-        </div>
-      </div>
-    );
-  }
+  // Fetch real case_id from conversation metadata
+  const [realCaseId, setRealCaseId] = React.useState<string | undefined>(undefined);
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/conversations/${conversationId}/metadata`);
+        if (!res.ok) return;
+        const meta = await res.json();
+        if (!cancelled) setRealCaseId(meta?.case_id);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [conversationId]);
 
   return (
     <div className="h-full w-full p-6 overflow-y-auto">
@@ -30,9 +30,35 @@ export default function DocumentsTab() {
             Upload documents to your case workspace. Files will be saved to the Intake folder by default.
           </p>
         </div>
-        
+
         <div className="bg-base-primary border border-gray-700 rounded-lg p-6">
-          <DocumentsUploader caseId={currentWorkspace.current_case_id} />
+          {realCaseId ? (
+            <DocumentsUploader conversationId={conversationId} />
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-400">Loading case information...</p>
+            </div>
+          )}
+        </div>
+
+        {/* File Browser Section */}
+        <div className="mt-6">
+          <div className="mb-4">
+            <h2 className="text-xl text-white font-semibold mb-2">File Explorer</h2>
+            <p className="text-gray-400">
+              Browse the case workspace directory structure and verify document placement.
+            </p>
+          </div>
+
+          {realCaseId ? (
+            <CaseFileBrowser conversationId={conversationId} />
+          ) : (
+            <div className="bg-base-primary border border-gray-700 rounded-lg p-6">
+              <div className="text-center py-8">
+                <p className="text-gray-400">Loading case information...</p>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="mt-6 bg-base-primary border border-gray-700 rounded-lg p-4">

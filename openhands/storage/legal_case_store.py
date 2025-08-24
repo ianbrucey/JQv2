@@ -54,14 +54,47 @@ class FileLegalCaseStore(LegalCaseStore):
         # Set up storage paths
         self.workspace_root = Path(os.environ.get('LEGAL_WORKSPACE_ROOT', '/app/legal_workspace'))
         self.cases_dir = self.workspace_root / 'cases'
-        self.draft_system_template = Path(os.environ.get('DRAFT_SYSTEM_PATH', '/app/draft_system'))
+
+        # Resolve draft_system template path with a robust fallback
+        env_path = os.environ.get('DRAFT_SYSTEM_PATH')
+        resolved_path: Path | None = None
+        if env_path:
+            p = Path(env_path)
+            if p.exists():
+                resolved_path = p
+        if resolved_path is None:
+            # Fallback to repository OpenHands/draft_system next to this file
+            here = Path(__file__).resolve()
+            root = None
+            for parent in here.parents:
+                if parent.name == 'OpenHands':
+                    root = parent
+                    break
+            if root is not None:
+                candidate = root / 'draft_system'
+                if candidate.exists():
+                    resolved_path = candidate
+        if resolved_path is None:
+            # Last resort default (containerized paths) - may not exist locally
+            resolved_path = Path('/app/draft_system')
+
+        self.draft_system_template = resolved_path
 
         # Auto-create all necessary directories
         self._ensure_directories_exist()
 
-        # Verify draft system exists
+        # Verify draft system exists or bail with clear error
         if not self.draft_system_template.exists():
-            raise ValueError(f"Draft system template not found at {self.draft_system_template}")
+            raise ValueError(
+                f"Draft system template not found at {self.draft_system_template}. "
+                "Set DRAFT_SYSTEM_PATH to your OpenHands/draft_system folder."
+            )
+
+        # Stabilize environment for this process so future instances reuse the resolved path
+        try:
+            os.environ['DRAFT_SYSTEM_PATH'] = str(self.draft_system_template)
+        except Exception:
+            pass
 
     def _ensure_directories_exist(self):
         """Automatically create all necessary directories."""
