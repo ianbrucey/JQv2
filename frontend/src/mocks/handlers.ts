@@ -193,11 +193,12 @@ export const handlers = [
     const body = await request.json();
     const now = new Date().toISOString();
     const id = Math.random().toString(36).slice(2);
+    const requestBody = body as Record<string, any>;
     const item: MockLegalCase = {
       case_id: id,
-      title: body?.title || 'Untitled Case',
-      case_number: body?.case_number,
-      description: body?.description,
+      title: requestBody?.title || 'Untitled Case',
+      case_number: requestBody?.case_number,
+      description: requestBody?.description,
       status: 'active',
       created_at: now,
       updated_at: now,

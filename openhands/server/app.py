@@ -21,6 +21,7 @@ from openhands.server.routes.git import app as git_api_router
 from openhands.server.routes.health import add_health_endpoints
 from openhands.server.routes.legal_cases import router as legal_cases_router
 from openhands.server.routes.documents import router as documents_router
+from openhands.server.routes.drafts import router as drafts_router
 from openhands.server.routes.manage_conversations import (
     app as manage_conversation_api_router,
 )
@@ -82,6 +83,7 @@ app.include_router(settings_router)
 app.include_router(secrets_router)
 app.include_router(legal_cases_router)
 app.include_router(documents_router)
+app.include_router(drafts_router)
 if server_config.app_mode == AppMode.OSS:
     app.include_router(git_api_router)
 app.include_router(trajectory_router)

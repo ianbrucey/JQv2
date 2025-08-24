@@ -33,7 +33,7 @@ export default function DocumentsTab() {
 
         <div className="bg-base-primary border border-gray-700 rounded-lg p-6">
           {realCaseId ? (
-            <DocumentsUploader conversationId={conversationId} />
+            <DocumentsUploader caseId={realCaseId} />
           ) : (
             <div className="text-center py-8">
               <p className="text-gray-400">Loading case information...</p>

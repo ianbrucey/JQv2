@@ -5,6 +5,7 @@ import { LoadingSpinner } from "../shared/loading-spinner";
 // Lazy load tabs
 const TerminalTab = lazy(() => import("#/routes/terminal-tab"));
 const DocumentsTab = lazy(() => import("#/routes/documents-tab"));
+const DraftsTab = lazy(() => import("#/routes/drafts-tab"));
 
 interface TabContentProps {
   conversationPath: string;
@@ -19,6 +20,7 @@ export function TabContent({ conversationPath }: TabContentProps) {
     currentPath === `${conversationPath}/terminal` ||
     currentPath === conversationPath;
   const isDocumentsActive = currentPath === `${conversationPath}/documents`;
+  const isDraftsActive = currentPath === `${conversationPath}/drafts`;
 
   return (
     <div className="h-full w-full relative">
@@ -39,6 +41,11 @@ export function TabContent({ conversationPath }: TabContentProps) {
           className={`absolute inset-0 ${isDocumentsActive ? "block" : "hidden"}`}
         >
           <DocumentsTab />
+        </div>
+        <div
+          className={`absolute inset-0 ${isDraftsActive ? "block" : "hidden"}`}
+        >
+          <DraftsTab />
         </div>
       </Suspense>
     </div>

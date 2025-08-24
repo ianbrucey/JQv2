@@ -24,6 +24,8 @@ export default [
       index("routes/terminal-tab.tsx"),
       // Documents tab route
       route("documents", "routes/documents-tab.tsx"),
+      // Drafts tab route
+      route("drafts", "routes/drafts-tab.tsx"),
     ]),
     route("microagent-management", "routes/microagent-management.tsx"),
   ]),
