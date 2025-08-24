@@ -375,3 +375,113 @@ async def delete_draft(case_id: str, draft_id: str):
     except Exception as e:
         logger.error(f"Failed to delete draft {draft_id} for case {case_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to delete draft: {str(e)}")
+
+
+class SectionContent(BaseModel):
+    content: str
+
+
+class SectionResponse(BaseModel):
+    section_id: str
+    name: str
+    content: str
+    file_path: str
+
+
+@router.get("/cases/{case_id}/drafts/{draft_id}/sections/{section_id}", response_model=SectionResponse)
+async def get_draft_section(case_id: str, draft_id: str, section_id: str) -> SectionResponse:
+    """Get the content of a specific draft section."""
+    try:
+        _, case_root, case_workspace = await _get_case_paths(case_id)
+        draft_dir = case_workspace / "active_drafts" / draft_id
+
+        if not draft_dir.exists():
+            raise HTTPException(status_code=404, detail="Draft not found")
+
+        # Load metadata to find section info
+        metadata_path = draft_dir / "metadata.yml"
+        if not metadata_path.exists():
+            raise HTTPException(status_code=404, detail="Draft metadata not found")
+
+        metadata = yaml.safe_load(metadata_path.read_text())
+        sections = metadata.get("sections", [])
+
+        # Find the section
+        section = None
+        for s in sections:
+            if s.get("id") == section_id:
+                section = s
+                break
+
+        if not section:
+            raise HTTPException(status_code=404, detail=f"Section '{section_id}' not found")
+
+        # Read section content
+        section_file = draft_dir / section["file"]
+        if not section_file.exists():
+            # Create empty section file if it doesn't exist
+            section_file.parent.mkdir(parents=True, exist_ok=True)
+            section_file.write_text(f"# {section['name']}\n\n")
+
+        content = section_file.read_text()
+
+        return SectionResponse(
+            section_id=section_id,
+            name=section["name"],
+            content=content,
+            file_path=section["file"]
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get section {section_id} for draft {draft_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get section: {str(e)}")
+
+
+@router.put("/cases/{case_id}/drafts/{draft_id}/sections/{section_id}")
+async def update_draft_section(case_id: str, draft_id: str, section_id: str, content: SectionContent):
+    """Update the content of a specific draft section."""
+    try:
+        _, case_root, case_workspace = await _get_case_paths(case_id)
+        draft_dir = case_workspace / "active_drafts" / draft_id
+
+        if not draft_dir.exists():
+            raise HTTPException(status_code=404, detail="Draft not found")
+
+        # Load metadata to find section info
+        metadata_path = draft_dir / "metadata.yml"
+        if not metadata_path.exists():
+            raise HTTPException(status_code=404, detail="Draft metadata not found")
+
+        metadata = yaml.safe_load(metadata_path.read_text())
+        sections = metadata.get("sections", [])
+
+        # Find the section
+        section = None
+        for s in sections:
+            if s.get("id") == section_id:
+                section = s
+                break
+
+        if not section:
+            raise HTTPException(status_code=404, detail=f"Section '{section_id}' not found")
+
+        # Write section content
+        section_file = draft_dir / section["file"]
+        section_file.parent.mkdir(parents=True, exist_ok=True)
+        section_file.write_text(content.content)
+
+        # Update metadata timestamp
+        metadata["updated_at"] = datetime.now(timezone.utc).isoformat()
+        metadata_path.write_text(yaml.dump(metadata, default_flow_style=False))
+
+        logger.info(f"Updated section {section_id} for draft {draft_id}")
+
+        return {"message": "Section updated successfully"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update section {section_id} for draft {draft_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to update section: {str(e)}")

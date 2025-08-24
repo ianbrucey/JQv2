@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useConversationId } from "#/hooks/use-conversation-id";
+import DraftEditor from "#/components/DraftEditor";
 
 interface DraftMeta {
   draft_id: string;
@@ -42,6 +43,10 @@ export default function DraftsTab() {
   const [creating, setCreating] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+
+  // Editor state
+  const [mode, setMode] = useState<'list' | 'edit'>('list');
+  const [selectedDraft, setSelectedDraft] = useState<DraftMeta | null>(null);
 
   // Form state
   const [draftType, setDraftType] = useState("complaint");
@@ -209,6 +214,16 @@ export default function DraftsTab() {
     }
   };
 
+  const handleEditDraft = (draft: DraftMeta) => {
+    setSelectedDraft(draft);
+    setMode('edit');
+  };
+
+  const handleBackToList = () => {
+    setMode('list');
+    setSelectedDraft(null);
+  };
+
   if (!caseId) {
     return (
       <div className="p-6 text-center">
@@ -219,6 +234,17 @@ export default function DraftsTab() {
           </p>
         </div>
       </div>
+    );
+  }
+
+  // Show editor mode if a draft is selected
+  if (mode === 'edit' && selectedDraft && caseId) {
+    return (
+      <DraftEditor
+        caseId={caseId}
+        draft={selectedDraft}
+        onBack={handleBackToList}
+      />
     );
   }
 
@@ -402,7 +428,10 @@ export default function DraftsTab() {
                       )}
                     </div>
                     <div className="flex gap-2">
-                      <button className="text-sm text-blue-400 hover:text-blue-300">
+                      <button
+                        onClick={() => handleEditDraft(draft)}
+                        className="text-sm text-blue-400 hover:text-blue-300"
+                      >
                         Edit
                       </button>
                       <button
