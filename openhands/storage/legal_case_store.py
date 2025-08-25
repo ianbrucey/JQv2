@@ -52,7 +52,7 @@ class FileLegalCaseStore(LegalCaseStore):
         self._db_initialized = False
 
         # Set up storage paths
-        self.workspace_root = Path(os.environ.get('LEGAL_WORKSPACE_ROOT', '/app/legal_workspace'))
+        self.workspace_root = Path(os.environ.get('LEGAL_WORKSPACE_ROOT', '/tmp/legal_workspace'))
         self.cases_dir = self.workspace_root / 'cases'
 
         # Resolve draft_system template path with a robust fallback

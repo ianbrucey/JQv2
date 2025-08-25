@@ -209,6 +209,13 @@ export function WsClientProvider({
         messageRateHandler.record(new Date().getTime());
       }
 
+      // Handle draft-specific events for real-time synchronization
+      if (event.observation && typeof event.observation === 'string' && event.observation.startsWith('draft_')) {
+        // Emit draft event to global event bus for draft sync hooks
+        const draftEvent = new CustomEvent('oh_event', { detail: event });
+        window.dispatchEvent(draftEvent);
+      }
+
       // Invalidate diffs cache when a file is edited or written
       if (
         isFileEditAction(event) ||

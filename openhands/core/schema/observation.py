@@ -55,3 +55,15 @@ class ObservationType(str, Enum):
 
     DOWNLOAD = 'download'
     """Result of downloading/opening a file via the browser"""
+
+    DRAFT_SECTIONS_CHANGED = 'draft_sections_changed'
+    """Draft sections were added, removed, or reordered"""
+
+    DRAFT_CONTENT_CHANGED = 'draft_content_changed'
+    """Draft section content was modified"""
+
+    DRAFT_METADATA_CHANGED = 'draft_metadata_changed'
+    """Draft metadata (name, type, etc.) was modified"""
+
+    DRAFT_SYNC_STATUS = 'draft_sync_status'
+    """Draft synchronization status update"""

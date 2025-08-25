@@ -10,6 +10,7 @@ from pathlib import Path
 from openhands.core.config.openhands_config import OpenHandsConfig
 from openhands.storage.legal_case_store import FileLegalCaseStore
 from openhands.storage.data_models.legal_case import LegalCase
+from openhands.server.services.draft_watcher import initialize_draft_watcher, shutdown_draft_watcher
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,19 @@ class SimpleLegalWorkspaceManager:
             try:
                 self.case_store = await FileLegalCaseStore.get_instance(self.config, user_id)
                 logger.info("Legal workspace manager initialized")
+
+                # Initialize draft file watcher for real-time synchronization
+                workspace_root = os.environ.get('LEGAL_WORKSPACE_ROOT', '/tmp/legal_workspace')
+
+                # Import socket.io here to avoid circular imports
+                try:
+                    from openhands.server.shared import sio
+                    initialize_draft_watcher(workspace_root, sio)
+                    logger.info("Draft file watcher initialized for real-time synchronization")
+                except Exception as e:
+                    logger.warning(f"Failed to initialize draft file watcher: {e}")
+                    logger.info("Draft system will work without real-time synchronization")
+
             except Exception as e:
                 logger.error(f"Failed to initialize legal workspace manager: {e}")
                 raise
@@ -91,6 +105,12 @@ class SimpleLegalWorkspaceManager:
         await self.case_store.update_case(case)
 
         self.current_case_id = case_id
+
+        # Start watching this case's draft files for real-time updates
+        from openhands.server.services.draft_watcher import get_draft_watcher
+        draft_watcher = get_draft_watcher()
+        if draft_watcher:
+            draft_watcher.watch_case(case_id)
 
         logger.info(f"Entered case workspace: {case_id} at {case_workspace_path}")
 
@@ -228,5 +248,7 @@ def initialize_legal_workspace_manager(config: OpenHandsConfig, session_id: str 
 
 
 def cleanup_legal_workspace_manager(session_id: str = None):
-    """Clean up function for backward compatibility - no-op for singleton."""
-    pass
+    """Clean up function for backward compatibility - now shuts down draft watcher."""
+    # Shutdown the draft watcher when cleaning up
+    shutdown_draft_watcher()
+    logger.info("Legal workspace manager cleanup completed")

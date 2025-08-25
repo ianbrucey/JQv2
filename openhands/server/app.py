@@ -53,7 +53,7 @@ def combine_lifespans(*lifespans):
 async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     async with conversation_manager:
         # Auto-initialize legal workspace manager
-        from openhands.server.legal_workspace_manager import get_legal_workspace_manager
+        from openhands.server.legal_workspace_manager import get_legal_workspace_manager, cleanup_legal_workspace_manager
         workspace_manager = get_legal_workspace_manager()
         if workspace_manager:
             try:
@@ -61,7 +61,12 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
             except Exception as e:
                 print(f"⚠️  Legal workspace manager initialization failed: {e}")
                 print("   Legal case features may not be available")
-        yield
+
+        try:
+            yield
+        finally:
+            # Cleanup on shutdown
+            cleanup_legal_workspace_manager()
 
 
 app = FastAPI(

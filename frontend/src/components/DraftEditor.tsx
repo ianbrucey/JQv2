@@ -5,6 +5,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
 import { useTranslation } from "react-i18next";
+import { useDraftSync, useDraftEditorSync } from "#/hooks/use-draft-sync";
+import type { DraftSectionsChangedEvent, DraftContentChangedEvent } from "#/hooks/use-draft-sync";
 
 interface Section {
   id: string;
@@ -46,6 +48,58 @@ export default function DraftEditor({ caseId, draft, onBack }: DraftEditorProps)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Real-time draft synchronization with enhanced section handling
+  const [sectionsUpdated, setSectionsUpdated] = useState(false);
+  const [externalContentUpdate, setExternalContentUpdate] = useState<{
+    sectionId: string;
+    timestamp: number;
+  } | null>(null);
+
+  // Enhanced draft sync with custom callbacks
+  const { invalidateSectionQueries } = useDraftSync({
+    caseId,
+    draftId: draft.draft_id,
+    onSectionsChanged: useCallback((event: DraftSectionsChangedEvent) => {
+      console.log(`Sections changed in draft ${draft.draft_id}:`, event.change_type, event.changed_section_id);
+      setSectionsUpdated(true);
+
+      // Clear the indicator after a short delay
+      setTimeout(() => setSectionsUpdated(false), 3000);
+    }, [draft.draft_id]),
+
+    onContentChanged: useCallback((event: DraftContentChangedEvent) => {
+      if (event.change_source === 'external' && event.section_id === selectedSectionId) {
+        console.log(`External content change detected in current section ${event.section_id}`);
+
+        // If user has unsaved changes, this is a conflict
+        if (hasUnsavedChanges) {
+          setExternalContentUpdate({
+            sectionId: event.section_id,
+            timestamp: Date.now()
+          });
+
+          // Clear the indicator after showing it
+          setTimeout(() => setExternalContentUpdate(null), 10000);
+        } else {
+          // No conflict - automatically refresh the content
+          // We'll handle this in a separate effect to avoid circular dependency
+          setExternalContentUpdate({
+            sectionId: event.section_id,
+            timestamp: Date.now()
+          });
+        }
+      }
+    }, [selectedSectionId, hasUnsavedChanges, caseId, draft.draft_id])
+  });
+
+  // Handle external content updates
+  useEffect(() => {
+    if (externalContentUpdate && !hasUnsavedChanges) {
+      invalidateSectionQueries(caseId, draft.draft_id, externalContentUpdate.sectionId);
+      setExternalContentUpdate(null);
+    }
+  }, [externalContentUpdate, hasUnsavedChanges, invalidateSectionQueries, caseId, draft.draft_id]);
 
   // Auto-save functionality with debounce
   const saveSection = useCallback(async (content: string) => {
@@ -263,6 +317,11 @@ export default function DraftEditor({ caseId, draft, onBack }: DraftEditorProps)
 
       {/* Section Tabs */}
       <div className="border-b border-neutral-600 bg-neutral-800">
+        {sectionsUpdated && (
+          <div className="px-4 py-2 bg-blue-900 border-b border-blue-700 text-blue-200 text-sm animate-pulse">
+            📝 Sections updated by external process
+          </div>
+        )}
         <div className="flex overflow-x-auto scrollbar-thin scrollbar-thumb-neutral-600 scrollbar-track-neutral-800">
           {draft.sections.map((section, index) => {
             const isActive = selectedSectionId === section.id;
@@ -295,6 +354,47 @@ export default function DraftEditor({ caseId, draft, onBack }: DraftEditorProps)
           })}
         </div>
       </div>
+
+      {/* External Content Update Notification */}
+      {externalContentUpdate && externalContentUpdate.sectionId === selectedSectionId && (
+        <div className="p-3 bg-amber-900 border-b border-amber-700 text-amber-200 text-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="animate-pulse">🔄</span>
+              <span>
+                {hasUnsavedChanges
+                  ? "Content conflict detected! External changes made while you were editing."
+                  : "Content updated by external process"
+                }
+              </span>
+            </div>
+            {hasUnsavedChanges && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    // Reload content, discarding local changes
+                    setHasUnsavedChanges(false);
+                    invalidateSectionQueries(caseId, draft.draft_id, selectedSectionId);
+                    setExternalContentUpdate(null);
+                  }}
+                  className="px-2 py-1 text-xs bg-amber-700 hover:bg-amber-600 rounded"
+                >
+                  Accept External Changes
+                </button>
+                <button
+                  onClick={() => {
+                    // Keep local changes, dismiss notification
+                    setExternalContentUpdate(null);
+                  }}
+                  className="px-2 py-1 text-xs bg-neutral-700 hover:bg-neutral-600 rounded"
+                >
+                  Keep My Changes
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Error Display */}
       {error && (
